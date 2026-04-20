@@ -3,6 +3,8 @@ import { logger } from "@/lib/logger";
 
 export function proxy(request: Request) {
     const { pathname } = new URL(request.url);
+    const authorization = request.headers.get("authorization") || "";
+    const isMobileBearerAuth = pathname.startsWith("/api/mobile/") && authorization.startsWith("Bearer ");
     const cookies = request.headers.get("cookie") || "";
     const sessionCookie = cookies
         .split(";")
@@ -23,6 +25,7 @@ export function proxy(request: Request) {
         pathname === "/register" ||
         pathname === "/forgot-password" ||
         pathname.startsWith("/api/auth/") ||
+        pathname.startsWith("/api/mobile/auth/") ||
         pathname === "/manifest.json" ||
         pathname === "/icon.svg" ||
         pathname === "/sw.js" ||
@@ -39,7 +42,7 @@ export function proxy(request: Request) {
     if (pathname.startsWith("/api")) {
         const response = isPublicPath
             ? NextResponse.next()
-            : isLoggedIn
+            : isLoggedIn || isMobileBearerAuth
                 ? NextResponse.next()
                 : NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

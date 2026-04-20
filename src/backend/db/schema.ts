@@ -40,6 +40,21 @@ export const sessions = sqliteTable("sessions", {
     createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
+export const mobileRefreshTokens = sqliteTable("mobile_refresh_tokens", {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").references(() => users.id).notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp" }),
+    replacedByTokenHash: text("replaced_by_token_hash"),
+    deviceInfo: text("device_info"),
+    ipAddress: text("ip_address"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+}, (table) => ({
+    userIdIdx: index("idx_mobile_refresh_tokens_user_id").on(table.userId),
+    expiresAtIdx: index("idx_mobile_refresh_tokens_expires_at").on(table.expiresAt),
+}));
+
 export const transactions = sqliteTable("transactions", {
     id: integer("id").primaryKey({ autoIncrement: true }),
     userId: integer("user_id").references(() => users.id).notNull(),
@@ -434,6 +449,7 @@ export type Streak = typeof streaks.$inferSelect;
 export type Achievement = typeof achievements.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type BillPayment = typeof billPayments.$inferSelect;
+export type MobileRefreshToken = typeof mobileRefreshTokens.$inferSelect;
 
 // Insert types
 export type InsertCategory = typeof categories.$inferInsert;
@@ -457,6 +473,7 @@ export type InsertAiAnomaliesCache = typeof aiAnomaliesCache.$inferInsert;
 export type InsertStreak = typeof streaks.$inferInsert;
 export type InsertAchievement = typeof achievements.$inferInsert;
 export type InsertBillPayment = typeof billPayments.$inferInsert;
+export type InsertMobileRefreshToken = typeof mobileRefreshTokens.$inferInsert;
 
 // Zod schemas
 export const insertCategorySchema = createInsertSchema(categories);

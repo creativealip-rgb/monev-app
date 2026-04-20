@@ -11,3 +11,4 @@ export * from "./debt-operations";
 export * from "./message-operations";
 export * from "./chat-operations";
 export * from "./coupon-operations";
+export * from "./mobile-auth-operations";

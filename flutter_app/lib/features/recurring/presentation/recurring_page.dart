@@ -1,0 +1,291 @@
+import "package:dio/dio.dart";
+import "package:flutter/material.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:intl/intl.dart";
+
+import "../../../core/presentation/async_state_views.dart";
+import "../../../core/presentation/feedback_helpers.dart";
+import "../../../core/presentation/mobile_scaffold.dart";
+import "../data/recurring_api.dart";
+
+final FutureProvider<List<Map<String, dynamic>>> recurringProvider =
+    FutureProvider<List<Map<String, dynamic>>>((Ref ref) async {
+  return ref.read(recurringApiProvider).getRecurring();
+});
+
+class RecurringPage extends ConsumerWidget {
+  const RecurringPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<Map<String, dynamic>>> items = ref.watch(recurringProvider);
+    final NumberFormat currency = NumberFormat.currency(
+      locale: "id_ID",
+      symbol: "Rp ",
+      decimalDigits: 0,
+    );
+
+    return MobileScaffold(
+      title: "Recurring",
+      currentPath: "/dashboard",
+      child: items.when(
+        data: (List<Map<String, dynamic>> data) {
+          if (data.isEmpty) {
+            return AppEmptyView(
+              title: "Belum ada recurring transaction",
+              action: FilledButton(
+                onPressed: () async {
+                  final bool changed = await _showRecurringDialog(context, ref);
+                  if (changed) ref.invalidate(recurringProvider);
+                },
+                child: const Text("Tambah Recurring"),
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async => ref.refresh(recurringProvider.future),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: data.length,
+              itemBuilder: (BuildContext context, int index) {
+                final Map<String, dynamic> item = data[index];
+                final bool isActive = (item["isActive"] ?? true) == true;
+                return Card(
+                  child: ListTile(
+                    title: Text((item["description"] ?? "-").toString()),
+                    subtitle: Text(
+                      "${(item["frequency"] ?? "monthly").toString()} • ${(item["type"] ?? "expense").toString()}",
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: <Widget>[
+                            Text(
+                              currency.format((item["amount"] ?? 0) as num),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(isActive ? "Aktif" : "Nonaktif"),
+                          ],
+                        ),
+                        IconButton(
+                          onPressed: () async {
+                            final bool changed = await _showRecurringDialog(
+                              context,
+                              ref,
+                              initial: item,
+                            );
+                            if (changed) ref.invalidate(recurringProvider);
+                          },
+                          icon: const Icon(Icons.edit, size: 18),
+                        ),
+                        IconButton(
+                          onPressed: () async {
+                            final bool confirm = await confirmDelete(context);
+                            if (!confirm) return;
+                            final int id = _parseInt(item["id"]) ?? 0;
+                            if (id <= 0) return;
+                            await ref.read(recurringApiProvider).deleteRecurring(id);
+                            ref.invalidate(recurringProvider);
+                            if (context.mounted) {
+                              showInfoSnackbar(context, "Recurring dihapus");
+                            }
+                          },
+                          icon: const Icon(Icons.delete, size: 18),
+                        ),
+                      ],
+                    ),
+                    onTap: () async {
+                      final int id = _parseInt(item["id"]) ?? 0;
+                      if (id <= 0) return;
+                      await ref.read(recurringApiProvider).updateRecurring(id, <String, dynamic>{
+                        "isActive": !isActive,
+                      });
+                      ref.invalidate(recurringProvider);
+                    },
+                  ),
+                );
+              },
+            ),
+          );
+        },
+        loading: () => const AppLoadingView(),
+        error: (Object error, StackTrace _) => AppErrorView(
+          message: _apiError(error, "Gagal memuat recurring"),
+          onRetry: () => ref.invalidate(recurringProvider),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final bool changed = await _showRecurringDialog(context, ref);
+          if (changed) ref.invalidate(recurringProvider);
+        },
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+Future<bool> _showRecurringDialog(
+  BuildContext context,
+  WidgetRef ref, {
+  Map<String, dynamic>? initial,
+}) async {
+  final TextEditingController amountController = TextEditingController(
+    text: (initial?["amount"] ?? "").toString(),
+  );
+  final TextEditingController descriptionController = TextEditingController(
+    text: (initial?["description"] ?? "").toString(),
+  );
+  String frequency = (initial?["frequency"] ?? "monthly").toString();
+  String type = (initial?["type"] ?? "expense").toString();
+  bool isActive = (initial?["isActive"] ?? true) == true;
+  String? errorText;
+  bool isSaving = false;
+
+  final bool? result = await showDialog<bool>(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return AlertDialog(
+            title: Text(initial == null ? "Tambah Recurring" : "Edit Recurring"),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Jumlah"),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: "Deskripsi"),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: frequency,
+                    items: const <DropdownMenuItem<String>>[
+                      DropdownMenuItem(value: "daily", child: Text("Harian")),
+                      DropdownMenuItem(value: "weekly", child: Text("Mingguan")),
+                      DropdownMenuItem(value: "monthly", child: Text("Bulanan")),
+                    ],
+                    onChanged: (String? value) {
+                      if (value != null) setState(() => frequency = value);
+                    },
+                    decoration: const InputDecoration(labelText: "Frekuensi"),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    items: const <DropdownMenuItem<String>>[
+                      DropdownMenuItem(value: "expense", child: Text("Pengeluaran")),
+                      DropdownMenuItem(value: "income", child: Text("Pemasukan")),
+                    ],
+                    onChanged: (String? value) {
+                      if (value != null) setState(() => type = value);
+                    },
+                    decoration: const InputDecoration(labelText: "Tipe"),
+                  ),
+                  SwitchListTile(
+                    value: isActive,
+                    onChanged: (bool value) => setState(() => isActive = value),
+                    title: const Text("Aktif"),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  if (errorText != null) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Text(
+                      errorText!,
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                child: const Text("Batal"),
+              ),
+              FilledButton(
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        final double? amount = double.tryParse(amountController.text);
+                        if (amount == null ||
+                            amount <= 0 ||
+                            descriptionController.text.trim().isEmpty) {
+                          setState(() => errorText = "Data recurring tidak valid.");
+                          return;
+                        }
+
+                        setState(() {
+                          isSaving = true;
+                          errorText = null;
+                        });
+
+                        try {
+                          final Map<String, dynamic> payload = <String, dynamic>{
+                            "amount": amount,
+                            "description": descriptionController.text.trim(),
+                            "frequency": frequency,
+                            "type": type,
+                            "isActive": isActive,
+                          };
+                          if (initial == null) {
+                            await ref.read(recurringApiProvider).createRecurring(payload);
+                          } else {
+                            final int id = _parseInt(initial["id"]) ?? 0;
+                            if (id <= 0) return;
+                            await ref.read(recurringApiProvider).updateRecurring(id, payload);
+                          }
+
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop(true);
+                          }
+                        } on DioException catch (e) {
+                          final dynamic body = e.response?.data;
+                          setState(() {
+                            errorText = body is Map<String, dynamic> && body["error"] != null
+                                ? body["error"].toString()
+                                : "Gagal menyimpan recurring.";
+                          });
+                        } finally {
+                          if (dialogContext.mounted) {
+                            setState(() => isSaving = false);
+                          }
+                        }
+                      },
+                child: Text(isSaving ? "Menyimpan..." : "Simpan"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  return result == true;
+}
+
+int? _parseInt(dynamic value) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? "");
+}
+
+String _apiError(Object error, String fallback) {
+  if (error is DioException) {
+    final dynamic body = error.response?.data;
+    if (body is Map<String, dynamic> && body["error"] != null) {
+      return body["error"].toString();
+    }
+  }
+  return fallback;
+}
+
