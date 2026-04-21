@@ -98,7 +98,7 @@ class DashboardPage extends ConsumerWidget {
                         label: "Monev AI",
                         icon: Icons.auto_awesome_rounded,
                         color: const Color(0xFFAB68FF),
-                        onTap: () => context.go("/chat"),
+                        onTap: () => context.go("/ai-chat"),
                       ),
                       _FeatureIcon(
                         width: itemWidth,
@@ -154,7 +154,7 @@ class DashboardPage extends ConsumerWidget {
                         label: "Tabungan",
                         icon: Icons.savings_rounded,
                         color: const Color(0xFFE4B5F7),
-                        onTap: () => context.go("/savings"),
+                        onTap: () => context.go("/accounts"),
                       ),
                     ],
                   );
