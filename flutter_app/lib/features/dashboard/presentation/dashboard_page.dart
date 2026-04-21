@@ -82,8 +82,8 @@ class DashboardPage extends ConsumerWidget {
               const SizedBox(height: 20),
               _SectionHeader(
                 title: "Fitur Andalan",
-                actionLabel: "Lihat Semua",
-                onTap: () => context.go("/fitur"),
+                actionLabel: "",
+                onTap: () {},
               ),
               const SizedBox(height: 12),
               LayoutBuilder(
@@ -475,17 +475,18 @@ class _SectionHeader extends StatelessWidget {
             color: Color(0xFF0F2547),
           ),
         ),
-        GestureDetector(
-          onTap: onTap,
-          child: Text(
-            actionLabel,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1E56C7),
+        if (actionLabel.isNotEmpty)
+          GestureDetector(
+            onTap: onTap,
+            child: Text(
+              actionLabel,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E56C7),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
