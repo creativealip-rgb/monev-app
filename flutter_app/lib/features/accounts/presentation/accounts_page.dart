@@ -18,7 +18,8 @@ class AccountsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Map<String, dynamic>>> items = ref.watch(accountsProvider);
+    final AsyncValue<List<Map<String, dynamic>>> items =
+        ref.watch(accountsProvider);
     final NumberFormat currency = NumberFormat.currency(
       locale: "id_ID",
       symbol: "Rp ",
@@ -27,13 +28,22 @@ class AccountsPage extends ConsumerWidget {
 
     return MobileScaffold(
       title: "Akun",
+      subtitle: "Saldo semua dompet dan rekening",
       currentPath: "/accounts",
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final bool changed = await _showAccountDialog(context, ref);
+          if (changed) ref.invalidate(accountsProvider);
+        },
+        child: const Icon(Icons.add),
+      ),
       child: items.when(
         data: (List<Map<String, dynamic>> data) {
           if (data.isEmpty) {
             return AppEmptyView(
               title: "Belum ada akun",
-              subtitle: "Tambahkan akun bank, e-money, atau cash.",
+              subtitle: "Tambahkan rekening bank, e-money, atau kas harian.",
+              icon: Icons.account_balance_wallet_outlined,
               action: FilledButton(
                 onPressed: () async {
                   final bool changed = await _showAccountDialog(context, ref);
@@ -47,12 +57,26 @@ class AccountsPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(accountsProvider.future),
             child: ListView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               itemCount: data.length,
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> account = data[index];
+                final String type = (account["type"] ?? "").toString();
                 return Card(
                   child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: const Color(0xFFDCE8FF),
+                      child: Icon(
+                        switch (type) {
+                          "bank" => Icons.account_balance_rounded,
+                          "emoney" => Icons.phone_iphone_rounded,
+                          "cash" => Icons.payments_rounded,
+                          "credit_card" => Icons.credit_card_rounded,
+                          _ => Icons.account_balance_wallet_rounded,
+                        },
+                        color: const Color(0xFF1E56C7),
+                      ),
+                    ),
                     title: Text((account["name"] ?? "-").toString()),
                     subtitle: Text((account["type"] ?? "-").toString()),
                     trailing: Row(
@@ -103,13 +127,6 @@ class AccountsPage extends ConsumerWidget {
           onRetry: () => ref.invalidate(accountsProvider),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final bool changed = await _showAccountDialog(context, ref);
-          if (changed) ref.invalidate(accountsProvider);
-        },
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
@@ -153,12 +170,13 @@ Future<bool> _showAccountDialog(
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: type,
+                    initialValue: type,
                     items: const <DropdownMenuItem<String>>[
                       DropdownMenuItem(value: "bank", child: Text("Bank")),
                       DropdownMenuItem(value: "emoney", child: Text("E-Money")),
                       DropdownMenuItem(value: "cash", child: Text("Cash")),
-                      DropdownMenuItem(value: "credit_card", child: Text("Credit Card")),
+                      DropdownMenuItem(
+                          value: "credit_card", child: Text("Credit Card")),
                       DropdownMenuItem(
                         value: "investment_wallet",
                         child: Text("Investment Wallet"),
@@ -179,7 +197,8 @@ Future<bool> _showAccountDialog(
                     const SizedBox(height: 8),
                     Text(
                       errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ],
@@ -187,14 +206,17 @@ Future<bool> _showAccountDialog(
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                onPressed: isSaving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
                 child: const Text("Batal"),
               ),
               FilledButton(
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final double? balance = double.tryParse(balanceController.text);
+                        final double? balance =
+                            double.tryParse(balanceController.text);
                         if (nameController.text.trim().isEmpty ||
                             balance == null ||
                             balance < 0) {
@@ -208,14 +230,17 @@ Future<bool> _showAccountDialog(
                         });
 
                         try {
-                          final Map<String, dynamic> payload = <String, dynamic>{
+                          final Map<String, dynamic> payload =
+                              <String, dynamic>{
                             "name": nameController.text.trim(),
                             "balance": balance,
                             "type": type,
                             "isActive": isActive,
                           };
                           if (initial == null) {
-                            await ref.read(accountsApiProvider).createAccount(payload);
+                            await ref
+                                .read(accountsApiProvider)
+                                .createAccount(payload);
                           } else {
                             final int id = _parseInt(initial["id"]) ?? 0;
                             if (id <= 0) return;
@@ -239,7 +264,8 @@ Future<bool> _showAccountDialog(
                         } on DioException catch (e) {
                           final dynamic body = e.response?.data;
                           setState(() {
-                            errorText = body is Map<String, dynamic> && body["error"] != null
+                            errorText = body is Map<String, dynamic> &&
+                                    body["error"] != null
                                 ? body["error"].toString()
                                 : "Gagal menyimpan akun.";
                           });
@@ -275,4 +301,3 @@ int? _parseInt(dynamic value) {
   if (value is int) return value;
   return int.tryParse(value?.toString() ?? "");
 }
-

@@ -54,3 +54,5 @@ flutter_app/.flutter-plugins-dependencies
 flutter_app/.metadata
 flutter_app/build/
 flutter_app/.idea/
+
+public/monev-app.apk

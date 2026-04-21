@@ -18,7 +18,8 @@ class DebtsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Map<String, dynamic>>> debts = ref.watch(debtsProvider);
+    final AsyncValue<List<Map<String, dynamic>>> debts =
+        ref.watch(debtsProvider);
     final NumberFormat currency = NumberFormat.currency(
       locale: "id_ID",
       symbol: "Rp ",
@@ -27,12 +28,24 @@ class DebtsPage extends ConsumerWidget {
 
     return MobileScaffold(
       title: "Hutang/Piutang",
-      currentPath: "/dashboard",
+      subtitle: "Pantau pinjaman masuk dan keluar",
+      currentPath: "/debts",
+      showBottomNavigation: false,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final bool changed = await _showDebtDialog(context, ref);
+          if (changed) ref.invalidate(debtsProvider);
+        },
+        child: const Icon(Icons.add),
+      ),
       child: debts.when(
         data: (List<Map<String, dynamic>> data) {
           if (data.isEmpty) {
             return AppEmptyView(
               title: "Belum ada data hutang/piutang",
+              subtitle:
+                  "Kelola siapa yang perlu dibayar atau menunggak ke kamu.",
+              icon: Icons.account_balance_outlined,
               action: FilledButton(
                 onPressed: () async {
                   final bool changed = await _showDebtDialog(context, ref);
@@ -46,12 +59,14 @@ class DebtsPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(debtsProvider.future),
             child: ListView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               itemCount: data.length,
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> item = data[index];
-                final bool isOwed = (item["direction"] ?? "owe").toString() == "owed";
-                final bool paid = (item["status"] ?? "unpaid").toString() == "paid";
+                final bool isOwed =
+                    (item["direction"] ?? "owe").toString() == "owed";
+                final bool paid =
+                    (item["status"] ?? "unpaid").toString() == "paid";
                 return Card(
                   child: ListTile(
                     title: Text((item["debtorName"] ?? "-").toString()),
@@ -67,7 +82,8 @@ class DebtsPage extends ConsumerWidget {
                           children: <Widget>[
                             Text(
                               currency.format((item["amount"] ?? 0) as num),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             Text(paid ? "Lunas" : "Belum lunas"),
                           ],
@@ -102,7 +118,9 @@ class DebtsPage extends ConsumerWidget {
                     onTap: () async {
                       final int id = _parseInt(item["id"]) ?? 0;
                       if (id <= 0) return;
-                      await ref.read(debtsApiProvider).updateDebt(id, <String, dynamic>{
+                      await ref
+                          .read(debtsApiProvider)
+                          .updateDebt(id, <String, dynamic>{
                         "status": paid ? "unpaid" : "paid",
                       });
                       ref.invalidate(debtsProvider);
@@ -118,13 +136,6 @@ class DebtsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat hutang/piutang"),
           onRetry: () => ref.invalidate(debtsProvider),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final bool changed = await _showDebtDialog(context, ref);
-          if (changed) ref.invalidate(debtsProvider);
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -154,7 +165,9 @@ Future<bool> _showDebtDialog(
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
-            title: Text(initial == null ? "Tambah Hutang/Piutang" : "Edit Hutang/Piutang"),
+            title: Text(initial == null
+                ? "Tambah Hutang/Piutang"
+                : "Edit Hutang/Piutang"),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -176,10 +189,13 @@ Future<bool> _showDebtDialog(
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: direction,
+                    initialValue: direction,
                     items: const <DropdownMenuItem<String>>[
-                      DropdownMenuItem(value: "owe", child: Text("Saya berhutang")),
-                      DropdownMenuItem(value: "owed", child: Text("Orang berhutang ke saya")),
+                      DropdownMenuItem(
+                          value: "owe", child: Text("Saya berhutang")),
+                      DropdownMenuItem(
+                          value: "owed",
+                          child: Text("Orang berhutang ke saya")),
                     ],
                     onChanged: (String? value) {
                       if (value != null) setState(() => direction = value);
@@ -190,7 +206,8 @@ Future<bool> _showDebtDialog(
                     const SizedBox(height: 8),
                     Text(
                       errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ],
@@ -198,15 +215,20 @@ Future<bool> _showDebtDialog(
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                onPressed: isSaving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
                 child: const Text("Batal"),
               ),
               FilledButton(
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final double? amount = double.tryParse(amountController.text);
-                        if (debtorController.text.trim().isEmpty || amount == null || amount <= 0) {
+                        final double? amount =
+                            double.tryParse(amountController.text);
+                        if (debtorController.text.trim().isEmpty ||
+                            amount == null ||
+                            amount <= 0) {
                           setState(() => errorText = "Data tidak valid.");
                           return;
                         }
@@ -217,18 +239,23 @@ Future<bool> _showDebtDialog(
                         });
 
                         try {
-                          final Map<String, dynamic> payload = <String, dynamic>{
+                          final Map<String, dynamic> payload =
+                              <String, dynamic>{
                             "debtorName": debtorController.text.trim(),
                             "amount": amount,
                             "description": descController.text.trim(),
                             "direction": direction,
                           };
                           if (initial == null) {
-                            await ref.read(debtsApiProvider).createDebt(payload);
+                            await ref
+                                .read(debtsApiProvider)
+                                .createDebt(payload);
                           } else {
                             final int id = _parseInt(initial["id"]) ?? 0;
                             if (id <= 0) return;
-                            await ref.read(debtsApiProvider).updateDebt(id, payload);
+                            await ref
+                                .read(debtsApiProvider)
+                                .updateDebt(id, payload);
                           }
                           if (dialogContext.mounted) {
                             Navigator.of(dialogContext).pop(true);
@@ -236,7 +263,8 @@ Future<bool> _showDebtDialog(
                         } on DioException catch (e) {
                           final dynamic body = e.response?.data;
                           setState(() {
-                            errorText = body is Map<String, dynamic> && body["error"] != null
+                            errorText = body is Map<String, dynamic> &&
+                                    body["error"] != null
                                 ? body["error"].toString()
                                 : "Gagal menyimpan data.";
                           });
@@ -272,4 +300,3 @@ String _apiError(Object error, String fallback) {
   }
   return fallback;
 }
-

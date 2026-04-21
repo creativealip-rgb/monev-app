@@ -16,19 +16,23 @@ class AiInsightPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<Map<String, dynamic>> insight = ref.watch(aiInsightProvider);
+    final AsyncValue<Map<String, dynamic>> insight =
+        ref.watch(aiInsightProvider);
 
     return MobileScaffold(
-      title: "AI Insight",
-      currentPath: "/dashboard",
+      title: "Insight AI",
+      subtitle: "Rekomendasi cerdas untuk keuanganmu",
+      currentPath: "/ai-insight",
+      showBottomNavigation: false,
       child: insight.when(
         data: (Map<String, dynamic> data) {
-          final String text = (data["insight"] ?? "Belum ada insight").toString();
+          final String text =
+              (data["insight"] ?? "Belum ada insight").toString();
           final String type = (data["type"] ?? "info").toString();
           final Color color = switch (type) {
             "success" => Colors.green,
             "warning" => Colors.orange,
-            _ => Colors.blue,
+            _ => const Color(0xFF1E56C7),
           };
 
           return Padding(
@@ -39,20 +43,40 @@ class AiInsightPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.lightbulb_outline_rounded,
+                              color: color),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          "Insight Hari Ini",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     Text(
-                      "Insight Hari Ini",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: color,
+                      text,
+                      style: const TextStyle(
+                        height: 1.45,
+                        color: Color(0xFF213A5E),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(text),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     OutlinedButton(
                       onPressed: () => ref.invalidate(aiInsightProvider),
-                      child: const Text("Refresh Insight"),
+                      child: const Text("Muat Ulang Insight"),
                     ),
                   ],
                 ),
@@ -79,4 +103,3 @@ String _apiError(Object error, String fallback) {
   }
   return fallback;
 }
-

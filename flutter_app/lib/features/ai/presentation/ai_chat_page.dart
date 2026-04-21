@@ -39,9 +39,8 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
       _error = null;
     });
     try {
-      final List<Map<String, dynamic>> rows = await ref
-          .read(aiApiProvider)
-          .getChatHistory();
+      final List<Map<String, dynamic>> rows =
+          await ref.read(aiApiProvider).getChatHistory();
       _messages
         ..clear()
         ..addAll(
@@ -83,10 +82,11 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
           )
           .toList();
 
-      final Map<String, dynamic> result = await ref.read(aiApiProvider).sendChat(
-            message: text,
-            history: history,
-          );
+      final Map<String, dynamic> result =
+          await ref.read(aiApiProvider).sendChat(
+                message: text,
+                history: history,
+              );
       final String reply = (result["reply"] ?? "Belum ada balasan").toString();
       if (!mounted) return;
       setState(() {
@@ -103,10 +103,24 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
   @override
   Widget build(BuildContext context) {
     return MobileScaffold(
-      title: "AI Chat",
-      currentPath: "/dashboard",
+      title: "Asisten AI",
+      subtitle: "Tanya jawab finansial personal",
+      currentPath: "/ai-chat",
+      showBottomNavigation: false,
       child: Column(
         children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Card(
+              child: ListTile(
+                leading:
+                    Icon(Icons.auto_awesome_rounded, color: Color(0xFF1E56C7)),
+                title: Text("Asisten Keuangan Monev"),
+                subtitle: Text(
+                    "Minta saran budget, evaluasi pengeluaran, atau ide menabung."),
+              ),
+            ),
+          ),
           Expanded(
             child: _loading
                 ? const AppLoadingView()
@@ -115,10 +129,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                     : _messages.isEmpty
                         ? const AppEmptyView(
                             title: "Belum ada chat",
-                            subtitle: "Tanyakan apa saja tentang kondisi keuanganmu.",
+                            subtitle:
+                                "Tanyakan apa saja tentang kondisi keuanganmu.",
+                            icon: Icons.chat_bubble_outline_rounded,
                           )
                         : ListView.builder(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
                             itemCount: _messages.length,
                             itemBuilder: (BuildContext context, int index) {
                               final _ChatMessage msg = _messages[index];
@@ -128,16 +144,18 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                                     ? Alignment.centerRight
                                     : Alignment.centerLeft,
                                 child: Container(
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 4),
                                   padding: const EdgeInsets.all(10),
                                   constraints: BoxConstraints(
-                                    maxWidth: MediaQuery.of(context).size.width * 0.8,
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width * 0.8,
                                   ),
                                   decoration: BoxDecoration(
                                     color: isUser
-                                        ? Theme.of(context).colorScheme.primaryContainer
-                                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(12),
+                                        ? const Color(0xFFDCE8FF)
+                                        : Colors.white.withValues(alpha: 0.98),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: Text(msg.content),
                                 ),
@@ -194,4 +212,3 @@ String _apiError(Object error, String fallback) {
   }
   return fallback;
 }
-

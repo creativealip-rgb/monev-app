@@ -29,31 +29,44 @@ class InvestmentsPage extends ConsumerWidget {
 
     return MobileScaffold(
       title: "Investasi",
-      currentPath: "/dashboard",
+      subtitle: "Portofolio dan performa aset",
+      currentPath: "/investments",
+      showBottomNavigation: false,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final bool changed = await _showInvestmentDialog(context, ref);
+          if (changed) ref.invalidate(investmentsSummaryProvider);
+        },
+        child: const Icon(Icons.add),
+      ),
       child: summary.when(
         data: (Map<String, dynamic> data) {
           final List<Map<String, dynamic>> items =
-              ((data["items"] as List<dynamic>? ?? <dynamic>[]).cast<Map<String, dynamic>>());
+              ((data["items"] as List<dynamic>? ?? <dynamic>[])
+                  .cast<Map<String, dynamic>>());
           return Column(
             children: <Widget>[
               Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
                       children: <Widget>[
                         _SummaryRow(
-                          label: "Total Value",
-                          value: currency.format((data["totalValue"] ?? 0) as num),
+                          label: "Nilai Portofolio",
+                          value:
+                              currency.format((data["totalValue"] ?? 0) as num),
                         ),
                         _SummaryRow(
                           label: "Total Profit",
-                          value: currency.format((data["totalProfit"] ?? 0) as num),
+                          value: currency
+                              .format((data["totalProfit"] ?? 0) as num),
                         ),
                         _SummaryRow(
-                          label: "Profit %",
-                          value: "${((data["profitPercent"] ?? 0) as num).toStringAsFixed(2)}%",
+                          label: "Persentase Profit",
+                          value:
+                              "${((data["profitPercent"] ?? 0) as num).toStringAsFixed(2)}%",
                         ),
                       ],
                     ),
@@ -64,18 +77,25 @@ class InvestmentsPage extends ConsumerWidget {
                 child: items.isEmpty
                     ? AppEmptyView(
                         title: "Belum ada investasi",
+                        subtitle:
+                            "Tambah aset untuk memantau nilai portofolio.",
+                        icon: Icons.trending_up_outlined,
                         action: FilledButton(
                           onPressed: () async {
-                            final bool changed = await _showInvestmentDialog(context, ref);
-                            if (changed) ref.invalidate(investmentsSummaryProvider);
+                            final bool changed =
+                                await _showInvestmentDialog(context, ref);
+                            if (changed) {
+                              ref.invalidate(investmentsSummaryProvider);
+                            }
                           },
                           child: const Text("Tambah Investasi"),
                         ),
                       )
                     : RefreshIndicator(
-                        onRefresh: () async => ref.refresh(investmentsSummaryProvider.future),
+                        onRefresh: () async =>
+                            ref.refresh(investmentsSummaryProvider.future),
                         child: ListView.builder(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
                           itemCount: items.length,
                           itemBuilder: (BuildContext context, int index) {
                             final Map<String, dynamic> item = items[index];
@@ -84,37 +104,47 @@ class InvestmentsPage extends ConsumerWidget {
                             return Card(
                               child: ListTile(
                                 title: Text((item["name"] ?? "-").toString()),
-                                subtitle: Text((item["type"] ?? "other").toString()),
+                                subtitle:
+                                    Text((item["type"] ?? "other").toString()),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: <Widget>[
                                     Text(
                                       currency.format(value),
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold),
                                     ),
                                     IconButton(
                                       onPressed: () async {
-                                        final bool changed = await _showInvestmentDialog(
+                                        final bool changed =
+                                            await _showInvestmentDialog(
                                           context,
                                           ref,
                                           initial: item,
                                         );
                                         if (changed) {
-                                          ref.invalidate(investmentsSummaryProvider);
+                                          ref.invalidate(
+                                              investmentsSummaryProvider);
                                         }
                                       },
                                       icon: const Icon(Icons.edit, size: 18),
                                     ),
                                     IconButton(
                                       onPressed: () async {
-                                        final bool confirm = await confirmDelete(context);
+                                        final bool confirm =
+                                            await confirmDelete(context);
                                         if (!confirm) return;
-                                        final int id = _parseInt(item["id"]) ?? 0;
+                                        final int id =
+                                            _parseInt(item["id"]) ?? 0;
                                         if (id <= 0) return;
-                                        await ref.read(investmentsApiProvider).deleteInvestment(id);
-                                        ref.invalidate(investmentsSummaryProvider);
+                                        await ref
+                                            .read(investmentsApiProvider)
+                                            .deleteInvestment(id);
+                                        ref.invalidate(
+                                            investmentsSummaryProvider);
                                         if (context.mounted) {
-                                          showInfoSnackbar(context, "Investasi dihapus");
+                                          showInfoSnackbar(
+                                              context, "Investasi dihapus");
                                         }
                                       },
                                       icon: const Icon(Icons.delete, size: 18),
@@ -135,13 +165,6 @@ class InvestmentsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat investasi"),
           onRetry: () => ref.invalidate(investmentsSummaryProvider),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final bool changed = await _showInvestmentDialog(context, ref);
-          if (changed) ref.invalidate(investmentsSummaryProvider);
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -194,7 +217,8 @@ Future<bool> _showInvestmentDialog(
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
-            title: Text(initial == null ? "Tambah Investasi" : "Edit Investasi"),
+            title:
+                Text(initial == null ? "Tambah Investasi" : "Edit Investasi"),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -205,11 +229,12 @@ Future<bool> _showInvestmentDialog(
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: type,
+                    initialValue: type,
                     items: const <DropdownMenuItem<String>>[
                       DropdownMenuItem(value: "stock", child: Text("Stock")),
                       DropdownMenuItem(value: "crypto", child: Text("Crypto")),
-                      DropdownMenuItem(value: "mutual_fund", child: Text("Mutual Fund")),
+                      DropdownMenuItem(
+                          value: "mutual_fund", child: Text("Mutual Fund")),
                       DropdownMenuItem(value: "gold", child: Text("Gold")),
                       DropdownMenuItem(value: "bond", child: Text("Bond")),
                       DropdownMenuItem(value: "other", child: Text("Other")),
@@ -229,19 +254,22 @@ Future<bool> _showInvestmentDialog(
                   TextField(
                     controller: avgBuyPriceController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Avg Buy Price"),
+                    decoration:
+                        const InputDecoration(labelText: "Avg Buy Price"),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: currentPriceController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Current Price"),
+                    decoration:
+                        const InputDecoration(labelText: "Current Price"),
                   ),
                   if (errorText != null) ...<Widget>[
                     const SizedBox(height: 8),
                     Text(
                       errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ],
@@ -249,16 +277,21 @@ Future<bool> _showInvestmentDialog(
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                onPressed: isSaving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
                 child: const Text("Batal"),
               ),
               FilledButton(
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final double? quantity = double.tryParse(quantityController.text);
-                        final double? avgBuyPrice = double.tryParse(avgBuyPriceController.text);
-                        final double? currentPrice = double.tryParse(currentPriceController.text);
+                        final double? quantity =
+                            double.tryParse(quantityController.text);
+                        final double? avgBuyPrice =
+                            double.tryParse(avgBuyPriceController.text);
+                        final double? currentPrice =
+                            double.tryParse(currentPriceController.text);
                         if (nameController.text.trim().isEmpty ||
                             quantity == null ||
                             quantity <= 0 ||
@@ -266,7 +299,8 @@ Future<bool> _showInvestmentDialog(
                             avgBuyPrice <= 0 ||
                             currentPrice == null ||
                             currentPrice <= 0) {
-                          setState(() => errorText = "Data investasi tidak valid.");
+                          setState(
+                              () => errorText = "Data investasi tidak valid.");
                           return;
                         }
 
@@ -276,7 +310,8 @@ Future<bool> _showInvestmentDialog(
                         });
 
                         try {
-                          final Map<String, dynamic> payload = <String, dynamic>{
+                          final Map<String, dynamic> payload =
+                              <String, dynamic>{
                             "name": nameController.text.trim(),
                             "type": type,
                             "quantity": quantity,
@@ -284,11 +319,15 @@ Future<bool> _showInvestmentDialog(
                             "currentPrice": currentPrice,
                           };
                           if (initial == null) {
-                            await ref.read(investmentsApiProvider).createInvestment(payload);
+                            await ref
+                                .read(investmentsApiProvider)
+                                .createInvestment(payload);
                           } else {
                             final int id = _parseInt(initial["id"]) ?? 0;
                             if (id <= 0) return;
-                            await ref.read(investmentsApiProvider).updateInvestment(id, payload);
+                            await ref
+                                .read(investmentsApiProvider)
+                                .updateInvestment(id, payload);
                           }
 
                           if (dialogContext.mounted) {
@@ -297,7 +336,8 @@ Future<bool> _showInvestmentDialog(
                         } on DioException catch (e) {
                           final dynamic body = e.response?.data;
                           setState(() {
-                            errorText = body is Map<String, dynamic> && body["error"] != null
+                            errorText = body is Map<String, dynamic> &&
+                                    body["error"] != null
                                 ? body["error"].toString()
                                 : "Gagal menyimpan investasi.";
                           });
@@ -333,4 +373,3 @@ String _apiError(Object error, String fallback) {
   }
   return fallback;
 }
-

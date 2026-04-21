@@ -18,7 +18,8 @@ class GoalsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Map<String, dynamic>>> items = ref.watch(goalsProvider);
+    final AsyncValue<List<Map<String, dynamic>>> items =
+        ref.watch(goalsProvider);
     final NumberFormat currency = NumberFormat.currency(
       locale: "id_ID",
       symbol: "Rp ",
@@ -26,20 +27,29 @@ class GoalsPage extends ConsumerWidget {
     );
 
     return MobileScaffold(
-      title: "Goals",
+      title: "Target",
+      subtitle: "Progres tujuan finansialmu",
       currentPath: "/goals",
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final bool changed = await _showGoalDialog(context, ref);
+          if (changed) ref.invalidate(goalsProvider);
+        },
+        child: const Icon(Icons.add),
+      ),
       child: items.when(
         data: (List<Map<String, dynamic>> data) {
           if (data.isEmpty) {
             return AppEmptyView(
-              title: "Belum ada goals",
+              title: "Belum ada target",
               subtitle: "Buat target finansial pertama kamu sekarang.",
+              icon: Icons.flag_outlined,
               action: FilledButton(
                 onPressed: () async {
                   final bool changed = await _showGoalDialog(context, ref);
                   if (changed) ref.invalidate(goalsProvider);
                 },
-                child: const Text("Tambah Goal"),
+                child: const Text("Tambah Target"),
               ),
             );
           }
@@ -47,13 +57,14 @@ class GoalsPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(goalsProvider.future),
             child: ListView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               itemCount: data.length,
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> goal = data[index];
                 final num target = (goal["targetAmount"] ?? 0) as num;
                 final num current = (goal["currentAmount"] ?? 0) as num;
-                final double ratio = target <= 0 ? 0 : (current / target).clamp(0, 1).toDouble();
+                final double ratio =
+                    target <= 0 ? 0 : (current / target).clamp(0, 1).toDouble();
 
                 return Card(
                   child: Padding(
@@ -66,7 +77,8 @@ class GoalsPage extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 (goal["name"] ?? "-").toString(),
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                             IconButton(
@@ -83,16 +95,15 @@ class GoalsPage extends ConsumerWidget {
                             IconButton(
                               icon: const Icon(Icons.delete, size: 18),
                               onPressed: () async {
-                                final bool confirm = await confirmDelete(context);
+                                final bool confirm =
+                                    await confirmDelete(context);
                                 if (!confirm) return;
                                 final int id = _parseInt(goal["id"]) ?? 0;
                                 if (id <= 0) return;
-                                await ref
-                                    .read(goalsApiProvider)
-                                    .deleteGoal(id);
+                                await ref.read(goalsApiProvider).deleteGoal(id);
                                 ref.invalidate(goalsProvider);
                                 if (context.mounted) {
-                                  showInfoSnackbar(context, "Goal dihapus");
+                                  showInfoSnackbar(context, "Target dihapus");
                                 }
                               },
                             ),
@@ -116,13 +127,6 @@ class GoalsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat goals"),
           onRetry: () => ref.invalidate(goalsProvider),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final bool changed = await _showGoalDialog(context, ref);
-          if (changed) ref.invalidate(goalsProvider);
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -151,7 +155,7 @@ Future<bool> _showGoalDialog(
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
-            title: Text(initial == null ? "Tambah Goal" : "Edit Goal"),
+            title: Text(initial == null ? "Tambah Target" : "Edit Target"),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -170,13 +174,15 @@ Future<bool> _showGoalDialog(
                   TextField(
                     controller: currentController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Progress saat ini"),
+                    decoration:
+                        const InputDecoration(labelText: "Progress saat ini"),
                   ),
                   if (errorText != null) ...<Widget>[
                     const SizedBox(height: 8),
                     Text(
                       errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ],
@@ -184,15 +190,19 @@ Future<bool> _showGoalDialog(
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                onPressed: isSaving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
                 child: const Text("Batal"),
               ),
               FilledButton(
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final double? target = double.tryParse(targetController.text);
-                        final double? current = double.tryParse(currentController.text);
+                        final double? target =
+                            double.tryParse(targetController.text);
+                        final double? current =
+                            double.tryParse(currentController.text);
                         if (nameController.text.trim().isEmpty ||
                             target == null ||
                             target <= 0 ||
@@ -208,14 +218,17 @@ Future<bool> _showGoalDialog(
                         });
 
                         try {
-                          final Map<String, dynamic> payload = <String, dynamic>{
+                          final Map<String, dynamic> payload =
+                              <String, dynamic>{
                             "name": nameController.text.trim(),
                             "targetAmount": target,
                             "currentAmount": current,
                           };
 
                           if (initial == null) {
-                            await ref.read(goalsApiProvider).createGoal(payload);
+                            await ref
+                                .read(goalsApiProvider)
+                                .createGoal(payload);
                           } else {
                             final int id = _parseInt(initial["id"]) ?? 0;
                             if (id <= 0) return;
@@ -232,14 +245,15 @@ Future<bool> _showGoalDialog(
                             showInfoSnackbar(
                               context,
                               initial == null
-                                  ? "Goal berhasil ditambahkan"
-                                  : "Goal berhasil diperbarui",
+                                  ? "Target berhasil ditambahkan"
+                                  : "Target berhasil diperbarui",
                             );
                           }
                         } on DioException catch (e) {
                           final dynamic body = e.response?.data;
                           setState(() {
-                            errorText = body is Map<String, dynamic> && body["error"] != null
+                            errorText = body is Map<String, dynamic> &&
+                                    body["error"] != null
                                 ? body["error"].toString()
                                 : "Gagal menyimpan goal.";
                           });
@@ -275,4 +289,3 @@ int? _parseInt(dynamic value) {
   if (value is int) return value;
   return int.tryParse(value?.toString() ?? "");
 }
-

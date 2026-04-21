@@ -1,9 +1,9 @@
 class AppConfig {
   const AppConfig._();
 
-  static const String _devApiBaseUrl = "http://10.0.2.2:3000";
-  static const String _stagingApiBaseUrl = "https://staging-api.example.com";
-  static const String _prodApiBaseUrl = "https://api.example.com";
+  static const String _devApiBaseUrl = "https://monev.app";
+  static const String _stagingApiBaseUrl = "https://monev.app";
+  static const String _prodApiBaseUrl = "https://monev.app";
 
   static const String appEnv = String.fromEnvironment(
     "APP_ENV",
@@ -25,4 +25,3 @@ class AppConfig {
     return defaultApiBaseUrl;
   }
 }
-

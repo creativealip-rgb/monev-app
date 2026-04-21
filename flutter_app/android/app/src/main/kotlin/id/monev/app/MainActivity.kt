@@ -1,4 +1,4 @@
-package com.example.monev_flutter
+package id.monev.app
 
 import io.flutter.embedding.android.FlutterActivity
 

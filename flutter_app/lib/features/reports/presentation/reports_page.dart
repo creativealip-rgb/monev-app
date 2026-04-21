@@ -29,36 +29,65 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     );
 
     return MobileScaffold(
-      title: "Reports",
-      currentPath: "/dashboard",
+      title: "Laporan",
+      subtitle: "Riwayat export dan ringkasan data",
+      currentPath: "/reports",
+      showBottomNavigation: false,
       child: Column(
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.all(12),
-            child: FilledButton.icon(
-              onPressed: _exporting
-                  ? null
-                  : () async {
-                      setState(() => _exporting = true);
-                      try {
-                        final String csv = await ref.read(reportsApiProvider).exportCsv();
-                        if (!mounted) return;
-                        showInfoSnackbar(context, "Export CSV siap (${csv.length} karakter)");
-                      } on DioException catch (e) {
-                        final dynamic body = e.response?.data;
-                        if (!mounted) return;
-                        showInfoSnackbar(
-                          context,
-                          body is Map<String, dynamic> && body["error"] != null
-                              ? body["error"].toString()
-                              : "Gagal export CSV",
-                        );
-                      } finally {
-                        if (mounted) setState(() => _exporting = false);
-                      }
-                    },
-              icon: const Icon(Icons.download_outlined),
-              label: Text(_exporting ? "Memproses..." : "Export CSV"),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      "Pusat Laporan",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0F2547),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Export laporan transaksi terbaru dalam format CSV untuk analisis lanjutan.",
+                      style: TextStyle(color: Color(0xFF4F6D95)),
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _exporting
+                          ? null
+                          : () async {
+                              setState(() => _exporting = true);
+                              try {
+                                final String csv = await ref
+                                    .read(reportsApiProvider)
+                                    .exportCsv();
+                                if (!context.mounted) return;
+                                showInfoSnackbar(context,
+                                    "Export CSV siap (${csv.length} karakter)");
+                              } on DioException catch (e) {
+                                final dynamic body = e.response?.data;
+                                if (!context.mounted) return;
+                                showInfoSnackbar(
+                                  context,
+                                  body is Map<String, dynamic> &&
+                                          body["error"] != null
+                                      ? body["error"].toString()
+                                      : "Gagal export CSV",
+                                );
+                              } finally {
+                                if (mounted) setState(() => _exporting = false);
+                              }
+                            },
+                      icon: const Icon(Icons.download_outlined),
+                      label: Text(_exporting ? "Memproses..." : "Export CSV"),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -71,7 +100,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () async => ref.refresh(reportsHistoryProvider.future),
+                  onRefresh: () async =>
+                      ref.refresh(reportsHistoryProvider.future),
                   child: ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: data.length,
@@ -79,7 +109,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       final Map<String, dynamic> item = data[index];
                       return Card(
                         child: ListTile(
-                          title: Text((item["type"] ?? "Report").toString()),
+                          title: Text((item["type"] ?? "Laporan").toString()),
                           subtitle: Text((item["period"] ?? "-").toString()),
                           trailing: Text((item["status"] ?? "-").toString()),
                         ),
@@ -90,7 +120,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               },
               loading: () => const AppLoadingView(),
               error: (Object error, StackTrace _) => AppErrorView(
-                message: _apiError(error, "Gagal memuat report history"),
+                message: _apiError(error, "Gagal memuat riwayat laporan"),
                 onRetry: () => ref.invalidate(reportsHistoryProvider),
               ),
             ),
@@ -110,4 +140,3 @@ String _apiError(Object error, String fallback) {
   }
   return fallback;
 }
-

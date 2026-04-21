@@ -35,105 +35,8 @@ class TransactionsPage extends ConsumerWidget {
 
     return MobileScaffold(
       title: "Transaksi",
+      subtitle: "Catatan pemasukan dan pengeluaran",
       currentPath: "/transactions",
-      child: items.when(
-        data: (List<Map<String, dynamic>> data) {
-          if (data.isEmpty) {
-            return AppEmptyView(
-              title: "Belum ada transaksi",
-              subtitle: "Tambah transaksi pertama kamu untuk mulai tracking.",
-              action: FilledButton(
-                onPressed: () async {
-                  final bool changed = await _showTransactionDialog(context, ref);
-                  if (changed) ref.invalidate(transactionsProvider);
-                },
-                child: const Text("Tambah Transaksi"),
-              ),
-            );
-          }
-
-          final NumberFormat currency = NumberFormat.currency(
-            locale: "id_ID",
-            symbol: "Rp ",
-            decimalDigits: 0,
-          );
-
-          return RefreshIndicator(
-            onRefresh: () async => ref.refresh(transactionsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: data.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> item = data[index];
-                final num amount = (item["amount"] ?? 0) as num;
-                final String type = (item["type"] ?? "expense").toString();
-                final Color amountColor = switch (type) {
-                  "income" => Colors.green,
-                  "expense" => Colors.red,
-                  _ => Colors.blue,
-                };
-
-                return Card(
-                  child: ListTile(
-                    title: Text((item["description"] ?? "-").toString()),
-                    subtitle: Text((item["categoryName"] ?? "Tanpa kategori").toString()),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: <Widget>[
-                        Text(
-                          currency.format(amount),
-                          style: TextStyle(
-                            color: amountColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 18),
-                              onPressed: () async {
-                                final bool changed = await _showTransactionDialog(
-                                  context,
-                                  ref,
-                                  initial: item,
-                                );
-                                if (changed) ref.invalidate(transactionsProvider);
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, size: 18),
-                              onPressed: () async {
-                                final bool confirm = await confirmDelete(context);
-                                if (!confirm) return;
-                                final int id = _parseInt(item["id"]) ?? 0;
-                                if (id <= 0) return;
-                                await ref
-                                    .read(transactionsApiProvider)
-                                    .deleteTransaction(id);
-                                ref.invalidate(transactionsProvider);
-                                if (context.mounted) {
-                                  showInfoSnackbar(context, "Transaksi dihapus");
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
-        loading: () => const AppLoadingView(),
-        error: (Object error, StackTrace _) => AppErrorView(
-          message: _apiError(error, "Gagal memuat transaksi"),
-          onRetry: () => ref.invalidate(transactionsProvider),
-        ),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final String? action = await showModalBottomSheet<String>(
@@ -173,6 +76,124 @@ class TransactionsPage extends ConsumerWidget {
         },
         child: const Icon(Icons.add),
       ),
+      child: items.when(
+        data: (List<Map<String, dynamic>> data) {
+          if (data.isEmpty) {
+            return AppEmptyView(
+              title: "Belum ada transaksi",
+              subtitle: "Tambah transaksi pertama untuk mulai pantau cashflow.",
+              icon: Icons.receipt_long_outlined,
+              action: FilledButton(
+                onPressed: () async {
+                  final bool changed =
+                      await _showTransactionDialog(context, ref);
+                  if (changed) ref.invalidate(transactionsProvider);
+                },
+                child: const Text("Tambah Transaksi"),
+              ),
+            );
+          }
+
+          final NumberFormat currency = NumberFormat.currency(
+            locale: "id_ID",
+            symbol: "Rp ",
+            decimalDigits: 0,
+          );
+
+          return RefreshIndicator(
+            onRefresh: () async => ref.refresh(transactionsProvider.future),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: data.length,
+              itemBuilder: (BuildContext context, int index) {
+                final Map<String, dynamic> item = data[index];
+                final num amount = (item["amount"] ?? 0) as num;
+                final String type = (item["type"] ?? "expense").toString();
+                final Color amountColor = switch (type) {
+                  "income" => Colors.green,
+                  "expense" => Colors.red,
+                  _ => Colors.blue,
+                };
+
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: amountColor.withValues(alpha: 0.14),
+                      child: Icon(
+                        switch (type) {
+                          "income" => Icons.south_west_rounded,
+                          "expense" => Icons.north_east_rounded,
+                          _ => Icons.compare_arrows_rounded,
+                        },
+                        color: amountColor,
+                        size: 18,
+                      ),
+                    ),
+                    title: Text((item["description"] ?? "-").toString()),
+                    subtitle: Text(
+                        (item["categoryName"] ?? "Tanpa kategori").toString()),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: <Widget>[
+                        Text(
+                          currency.format(amount),
+                          style: TextStyle(
+                            color: amountColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 18),
+                              onPressed: () async {
+                                final bool changed =
+                                    await _showTransactionDialog(
+                                  context,
+                                  ref,
+                                  initial: item,
+                                );
+                                if (changed) {
+                                  ref.invalidate(transactionsProvider);
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, size: 18),
+                              onPressed: () async {
+                                final bool confirm =
+                                    await confirmDelete(context);
+                                if (!confirm) return;
+                                final int id = _parseInt(item["id"]) ?? 0;
+                                if (id <= 0) return;
+                                await ref
+                                    .read(transactionsApiProvider)
+                                    .deleteTransaction(id);
+                                ref.invalidate(transactionsProvider);
+                                if (context.mounted) {
+                                  showInfoSnackbar(
+                                      context, "Transaksi dihapus");
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+        loading: () => const AppLoadingView(),
+        error: (Object error, StackTrace _) => AppErrorView(
+          message: _apiError(error, "Gagal memuat transaksi"),
+          onRetry: () => ref.invalidate(transactionsProvider),
+        ),
+      ),
     );
   }
 }
@@ -211,7 +232,8 @@ Future<bool> _showImportDialog(BuildContext context, WidgetRef ref) async {
                     const SizedBox(height: 8),
                     Text(
                       errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ],
@@ -219,19 +241,23 @@ Future<bool> _showImportDialog(BuildContext context, WidgetRef ref) async {
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: isImporting ? null : () => Navigator.of(dialogContext).pop(false),
+                onPressed: isImporting
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
                 child: const Text("Batal"),
               ),
               FilledButton(
                 onPressed: isImporting
                     ? null
                     : () async {
-                        final List<Map<String, dynamic>> rows = _parseImportRows(
+                        final List<Map<String, dynamic>> rows =
+                            _parseImportRows(
                           csvController.text,
                         );
                         if (rows.isEmpty) {
                           setState(() {
-                            errorText = "Data CSV kosong atau format tidak valid.";
+                            errorText =
+                                "Data CSV kosong atau format tidak valid.";
                           });
                           return;
                         }
@@ -242,8 +268,9 @@ Future<bool> _showImportDialog(BuildContext context, WidgetRef ref) async {
                         });
 
                         try {
-                          final Map<String, dynamic> stats =
-                              await ref.read(transactionsApiProvider).importTransactions(rows);
+                          final Map<String, dynamic> stats = await ref
+                              .read(transactionsApiProvider)
+                              .importTransactions(rows);
                           if (dialogContext.mounted) {
                             Navigator.of(dialogContext).pop(true);
                           }
@@ -256,7 +283,8 @@ Future<bool> _showImportDialog(BuildContext context, WidgetRef ref) async {
                         } on DioException catch (e) {
                           final dynamic body = e.response?.data;
                           setState(() {
-                            errorText = body is Map<String, dynamic> && body["error"] != null
+                            errorText = body is Map<String, dynamic> &&
+                                    body["error"] != null
                                 ? body["error"].toString()
                                 : "Gagal import transaksi.";
                           });
@@ -309,6 +337,7 @@ Future<bool> _showTransactionDialog(
   if (accountId == null && accounts.isNotEmpty) {
     accountId = _parseInt(accounts.first["id"]);
   }
+  if (!context.mounted) return false;
 
   final bool? result = await showDialog<bool>(
     context: context,
@@ -316,7 +345,8 @@ Future<bool> _showTransactionDialog(
       return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
-            title: Text(initial == null ? "Tambah Transaksi" : "Edit Transaksi"),
+            title:
+                Text(initial == null ? "Tambah Transaksi" : "Edit Transaksi"),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -333,11 +363,14 @@ Future<bool> _showTransactionDialog(
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: type,
+                    initialValue: type,
                     items: const <DropdownMenuItem<String>>[
-                      DropdownMenuItem(value: "expense", child: Text("Pengeluaran")),
-                      DropdownMenuItem(value: "income", child: Text("Pemasukan")),
-                      DropdownMenuItem(value: "transfer", child: Text("Transfer")),
+                      DropdownMenuItem(
+                          value: "expense", child: Text("Pengeluaran")),
+                      DropdownMenuItem(
+                          value: "income", child: Text("Pemasukan")),
+                      DropdownMenuItem(
+                          value: "transfer", child: Text("Transfer")),
                     ],
                     onChanged: (String? value) {
                       if (value == null) return;
@@ -347,41 +380,46 @@ Future<bool> _showTransactionDialog(
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int>(
-                    value: categoryId,
+                    initialValue: categoryId,
                     items: categories
                         .map(
-                          (Map<String, dynamic> category) => DropdownMenuItem<int>(
+                          (Map<String, dynamic> category) =>
+                              DropdownMenuItem<int>(
                             value: _parseInt(category["id"]),
                             child: Text((category["name"] ?? "-").toString()),
                           ),
                         )
                         .toList(),
-                    onChanged: (int? value) => setState(() => categoryId = value),
+                    onChanged: (int? value) =>
+                        setState(() => categoryId = value),
                     decoration: const InputDecoration(labelText: "Kategori"),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int?>(
-                    value: accountId,
+                    initialValue: accountId,
                     items: <DropdownMenuItem<int?>>[
                       const DropdownMenuItem<int?>(
                         value: null,
                         child: Text("Tanpa akun"),
                       ),
                       ...accounts.map(
-                        (Map<String, dynamic> account) => DropdownMenuItem<int?>(
+                        (Map<String, dynamic> account) =>
+                            DropdownMenuItem<int?>(
                           value: _parseInt(account["id"]),
                           child: Text((account["name"] ?? "-").toString()),
                         ),
                       ),
                     ],
-                    onChanged: (int? value) => setState(() => accountId = value),
+                    onChanged: (int? value) =>
+                        setState(() => accountId = value),
                     decoration: const InputDecoration(labelText: "Akun"),
                   ),
                   if (errorText != null) ...<Widget>[
                     const SizedBox(height: 8),
                     Text(
                       errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ],
@@ -389,15 +427,20 @@ Future<bool> _showTransactionDialog(
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                onPressed: isSaving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
                 child: const Text("Batal"),
               ),
               FilledButton(
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final double? amount = double.tryParse(amountController.text);
-                        if (amount == null || amount <= 0 || categoryId == null) {
+                        final double? amount =
+                            double.tryParse(amountController.text);
+                        if (amount == null ||
+                            amount <= 0 ||
+                            categoryId == null) {
                           setState(() {
                             errorText = "Pastikan jumlah dan kategori valid.";
                           });
@@ -410,7 +453,8 @@ Future<bool> _showTransactionDialog(
                         });
 
                         try {
-                          final Map<String, dynamic> payload = <String, dynamic>{
+                          final Map<String, dynamic> payload =
+                              <String, dynamic>{
                             "amount": amount,
                             "description": descController.text.trim(),
                             "type": type,
@@ -420,11 +464,15 @@ Future<bool> _showTransactionDialog(
                           };
 
                           if (initial == null) {
-                            await ref.read(transactionsApiProvider).createTransaction(payload);
+                            await ref
+                                .read(transactionsApiProvider)
+                                .createTransaction(payload);
                           } else {
                             final int id = _parseInt(initial["id"]) ?? 0;
                             if (id <= 0) return;
-                            await ref.read(transactionsApiProvider).updateTransaction(
+                            await ref
+                                .read(transactionsApiProvider)
+                                .updateTransaction(
                                   id,
                                   payload,
                                 );
@@ -443,7 +491,8 @@ Future<bool> _showTransactionDialog(
                         } on DioException catch (e) {
                           final dynamic body = e.response?.data;
                           setState(() {
-                            errorText = body is Map<String, dynamic> && body["error"] != null
+                            errorText = body is Map<String, dynamic> &&
+                                    body["error"] != null
                                 ? body["error"].toString()
                                 : "Gagal menyimpan transaksi.";
                           });
@@ -487,11 +536,11 @@ List<Map<String, dynamic>> _parseImportRows(String input) {
     if (amount == null || amount == 0) continue;
 
     final String description = parts[1].trim();
-    final String type = parts.length > 2 ? parts[2].trim().toLowerCase() : "expense";
+    final String type =
+        parts.length > 2 ? parts[2].trim().toLowerCase() : "expense";
     final String category = parts.length > 3 ? parts[3].trim() : "Lainnya";
-    final String? date = parts.length > 4 && parts[4].trim().isNotEmpty
-        ? parts[4].trim()
-        : null;
+    final String? date =
+        parts.length > 4 && parts[4].trim().isNotEmpty ? parts[4].trim() : null;
 
     rows.add(<String, dynamic>{
       "amount": amount,
@@ -513,4 +562,3 @@ String _apiError(Object error, String fallback) {
   }
   return fallback;
 }
-

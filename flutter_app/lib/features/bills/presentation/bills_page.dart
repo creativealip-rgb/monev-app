@@ -18,7 +18,8 @@ class BillsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Map<String, dynamic>>> bills = ref.watch(billsProvider);
+    final AsyncValue<List<Map<String, dynamic>>> bills =
+        ref.watch(billsProvider);
     final NumberFormat currency = NumberFormat.currency(
       locale: "id_ID",
       symbol: "Rp ",
@@ -27,13 +28,23 @@ class BillsPage extends ConsumerWidget {
 
     return MobileScaffold(
       title: "Tagihan",
-      currentPath: "/dashboard",
+      subtitle: "Jadwal pembayaran rutin",
+      currentPath: "/bills",
+      showBottomNavigation: false,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final bool changed = await _showBillDialog(context, ref);
+          if (changed) ref.invalidate(billsProvider);
+        },
+        child: const Icon(Icons.add),
+      ),
       child: bills.when(
         data: (List<Map<String, dynamic>> data) {
           if (data.isEmpty) {
             return AppEmptyView(
               title: "Belum ada tagihan",
               subtitle: "Tambah tagihan rutin kamu agar tidak terlewat.",
+              icon: Icons.receipt_long_outlined,
               action: FilledButton(
                 onPressed: () async {
                   final bool changed = await _showBillDialog(context, ref);
@@ -47,7 +58,7 @@ class BillsPage extends ConsumerWidget {
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(billsProvider.future),
             child: ListView.builder(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               itemCount: data.length,
               itemBuilder: (BuildContext context, int index) {
                 final Map<String, dynamic> bill = data[index];
@@ -67,7 +78,8 @@ class BillsPage extends ConsumerWidget {
                           children: <Widget>[
                             Text(
                               currency.format((bill["amount"] ?? 0) as num),
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             Text(isPaid ? "Lunas" : "Belum lunas"),
                           ],
@@ -108,7 +120,11 @@ class BillsPage extends ConsumerWidget {
                       );
                       ref.invalidate(billsProvider);
                       if (context.mounted) {
-                        showInfoSnackbar(context, isPaid ? "Tagihan dibuka lagi" : "Tagihan ditandai lunas");
+                        showInfoSnackbar(
+                            context,
+                            isPaid
+                                ? "Tagihan dibuka lagi"
+                                : "Tagihan ditandai lunas");
                       }
                     },
                   ),
@@ -122,13 +138,6 @@ class BillsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat tagihan"),
           onRetry: () => ref.invalidate(billsProvider),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final bool changed = await _showBillDialog(context, ref);
-          if (changed) ref.invalidate(billsProvider);
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -168,7 +177,8 @@ Future<bool> _showBillDialog(
                 children: <Widget>[
                   TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(labelText: "Nama tagihan"),
+                    decoration:
+                        const InputDecoration(labelText: "Nama tagihan"),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -180,14 +190,17 @@ Future<bool> _showBillDialog(
                   TextField(
                     controller: dueDateController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Tanggal jatuh tempo (1-31)"),
+                    decoration: const InputDecoration(
+                        labelText: "Tanggal jatuh tempo (1-31)"),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: frequency,
+                    initialValue: frequency,
                     items: const <DropdownMenuItem<String>>[
-                      DropdownMenuItem(value: "monthly", child: Text("Bulanan")),
-                      DropdownMenuItem(value: "weekly", child: Text("Mingguan")),
+                      DropdownMenuItem(
+                          value: "monthly", child: Text("Bulanan")),
+                      DropdownMenuItem(
+                          value: "weekly", child: Text("Mingguan")),
                       DropdownMenuItem(value: "yearly", child: Text("Tahunan")),
                     ],
                     onChanged: (String? value) {
@@ -204,7 +217,8 @@ Future<bool> _showBillDialog(
                     const SizedBox(height: 8),
                     Text(
                       errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
                     ),
                   ],
                 ],
@@ -212,22 +226,27 @@ Future<bool> _showBillDialog(
             ),
             actions: <Widget>[
               TextButton(
-                onPressed: isSaving ? null : () => Navigator.of(dialogContext).pop(false),
+                onPressed: isSaving
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(false),
                 child: const Text("Batal"),
               ),
               FilledButton(
                 onPressed: isSaving
                     ? null
                     : () async {
-                        final double? amount = double.tryParse(amountController.text);
-                        final int? dueDate = int.tryParse(dueDateController.text);
+                        final double? amount =
+                            double.tryParse(amountController.text);
+                        final int? dueDate =
+                            int.tryParse(dueDateController.text);
                         if (nameController.text.trim().isEmpty ||
                             amount == null ||
                             amount <= 0 ||
                             dueDate == null ||
                             dueDate < 1 ||
                             dueDate > 31) {
-                          setState(() => errorText = "Data tagihan tidak valid.");
+                          setState(
+                              () => errorText = "Data tagihan tidak valid.");
                           return;
                         }
 
@@ -237,7 +256,8 @@ Future<bool> _showBillDialog(
                         });
 
                         try {
-                          final Map<String, dynamic> payload = <String, dynamic>{
+                          final Map<String, dynamic> payload =
+                              <String, dynamic>{
                             "name": nameController.text.trim(),
                             "amount": amount,
                             "dueDate": dueDate,
@@ -246,11 +266,15 @@ Future<bool> _showBillDialog(
                           };
 
                           if (initial == null) {
-                            await ref.read(billsApiProvider).createBill(payload);
+                            await ref
+                                .read(billsApiProvider)
+                                .createBill(payload);
                           } else {
                             final int id = _parseInt(initial["id"]) ?? 0;
                             if (id <= 0) return;
-                            await ref.read(billsApiProvider).updateBill(id, payload);
+                            await ref
+                                .read(billsApiProvider)
+                                .updateBill(id, payload);
                           }
 
                           if (dialogContext.mounted) {
@@ -267,7 +291,8 @@ Future<bool> _showBillDialog(
                         } on DioException catch (e) {
                           final dynamic body = e.response?.data;
                           setState(() {
-                            errorText = body is Map<String, dynamic> && body["error"] != null
+                            errorText = body is Map<String, dynamic> &&
+                                    body["error"] != null
                                 ? body["error"].toString()
                                 : "Gagal menyimpan tagihan.";
                           });
@@ -303,4 +328,3 @@ String _apiError(Object error, String fallback) {
   }
   return fallback;
 }
-
