@@ -7,21 +7,29 @@ class AppLoadingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(strokeWidth: 3),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Memuat data...",
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: const Color(0xFF4F6D95)),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            "Memuat data...",
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: const Color(0xFF4F6D95)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -55,6 +63,15 @@ class AppErrorView extends StatelessWidget {
                   color: theme.colorScheme.error,
                 ),
                 const SizedBox(height: 10),
+                Text(
+                  "Terjadi kendala",
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1E3558),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   message,
                   textAlign: TextAlign.center,

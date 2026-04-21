@@ -60,74 +60,101 @@ class BudgetsPage extends ConsumerWidget {
               ),
             );
           }
+          final num totalBudget = data.fold<num>(
+            0,
+            (num sum, Map<String, dynamic> item) => sum + ((item["amount"] ?? 0) as num),
+          );
+          final num totalSpent = data.fold<num>(
+            0,
+            (num sum, Map<String, dynamic> item) => sum + ((item["spent"] ?? 0) as num),
+          );
 
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(budgetsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: data.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> item = data[index];
-                final num amount = (item["amount"] ?? 0) as num;
-                final num spent = (item["spent"] ?? 0) as num;
-                final double ratio =
-                    amount <= 0 ? 0 : (spent / amount).clamp(0, 1).toDouble();
-
-                return Card(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: <Widget>[
+                Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Row(
                       children: <Widget>[
-                        Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: Text(
-                                (item["category"] ?? "-").toString(),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 18),
-                              onPressed: () async {
-                                final bool changed = await _showBudgetDialog(
-                                  context,
-                                  ref,
-                                  initial: item,
-                                );
-                                if (changed) ref.invalidate(budgetsProvider);
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, size: 18),
-                              onPressed: () async {
-                                final bool confirm =
-                                    await confirmDelete(context);
-                                if (!confirm) return;
-                                final int id = _parseInt(item["id"]) ?? 0;
-                                if (id <= 0) return;
-                                await ref
-                                    .read(budgetsApiProvider)
-                                    .deleteBudget(id);
-                                ref.invalidate(budgetsProvider);
-                                if (context.mounted) {
-                                  showInfoSnackbar(context, "Anggaran dihapus");
-                                }
-                              },
-                            ),
-                          ],
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Total Budget",
+                            value: currency.format(totalBudget),
+                          ),
                         ),
-                        Text(
-                          "${currency.format(spent)} / ${currency.format(amount)}",
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Sudah Terpakai",
+                            value: currency.format(totalSpent),
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        LinearProgressIndicator(value: ratio),
                       ],
                     ),
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 10),
+                ...data.map((Map<String, dynamic> item) {
+                  final num amount = (item["amount"] ?? 0) as num;
+                  final num spent = (item["spent"] ?? 0) as num;
+                  final double ratio =
+                      amount <= 0 ? 0 : (spent / amount).clamp(0, 1).toDouble();
+
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: Text(
+                                  (item["category"] ?? "-").toString(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 18),
+                                onPressed: () async {
+                                  final bool changed = await _showBudgetDialog(
+                                    context,
+                                    ref,
+                                    initial: item,
+                                  );
+                                  if (changed) ref.invalidate(budgetsProvider);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18),
+                                onPressed: () async {
+                                  final bool confirm = await confirmDelete(context);
+                                  if (!confirm) return;
+                                  final int id = _parseInt(item["id"]) ?? 0;
+                                  if (id <= 0) return;
+                                  await ref.read(budgetsApiProvider).deleteBudget(id);
+                                  ref.invalidate(budgetsProvider);
+                                  if (context.mounted) {
+                                    showInfoSnackbar(context, "Anggaran dihapus");
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          Text(
+                            "${currency.format(spent)} / ${currency.format(amount)}",
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(value: ratio),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ),
           );
         },
@@ -136,6 +163,46 @@ class BudgetsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat budget"),
           onRetry: () => ref.invalidate(budgetsProvider),
         ),
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  const _SummaryItem({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF2FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4E6B94),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3558),
+            ),
+          ),
+        ],
       ),
     );
   }

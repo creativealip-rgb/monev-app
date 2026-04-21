@@ -151,14 +151,19 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                                     maxWidth:
                                         MediaQuery.of(context).size.width * 0.8,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: isUser
-                                        ? const Color(0xFFDCE8FF)
-                                        : Colors.white.withValues(alpha: 0.98),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Text(msg.content),
-                                ),
+                                   decoration: BoxDecoration(
+                                     color: isUser
+                                         ? const Color(0xFFDCE8FF)
+                                         : Colors.white.withValues(alpha: 0.98),
+                                     borderRadius: BorderRadius.circular(14),
+                                     border: Border.all(
+                                       color: isUser
+                                           ? const Color(0xFFBFD6FF)
+                                           : const Color(0xFFE4ECFA),
+                                     ),
+                                   ),
+                                   child: Text(msg.content),
+                                 ),
                               );
                             },
                           ),
@@ -175,11 +180,12 @@ class _AiChatPageState extends ConsumerState<AiChatPage> {
                       textInputAction: TextInputAction.send,
                       minLines: 1,
                       maxLines: 4,
-                      onSubmitted: (_) => _send(),
-                      decoration: const InputDecoration(
-                        hintText: "Tanya soal keuangan...",
-                        border: OutlineInputBorder(),
-                      ),
+                       onSubmitted: (_) => _send(),
+                       decoration: const InputDecoration(
+                         hintText:
+                             "Contoh: gimana cara hemat 20% gaji tiap bulan?",
+                         border: OutlineInputBorder(),
+                       ),
                     ),
                   ),
                   const SizedBox(width: 8),

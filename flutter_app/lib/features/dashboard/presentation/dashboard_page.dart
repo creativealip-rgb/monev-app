@@ -78,38 +78,47 @@ class DashboardPage extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               Text(
-                "Akses Cepat",
+                "Menu Utama",
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F2547),
                     ),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: <Widget>[
-                  _QuickActionCard(
-                    label: "Transaksi",
-                    icon: Icons.receipt_long_rounded,
-                    onTap: () => context.go("/transactions"),
-                  ),
-                  _QuickActionCard(
-                    label: "Anggaran",
-                    icon: Icons.pie_chart_rounded,
-                    onTap: () => context.go("/budgets"),
-                  ),
-                  _QuickActionCard(
-                    label: "Target",
-                    icon: Icons.flag_rounded,
-                    onTap: () => context.go("/goals"),
-                  ),
-                  _QuickActionCard(
-                    label: "Laporan",
-                    icon: Icons.insert_chart_outlined,
-                    onTap: () => context.go("/reports"),
-                  ),
-                ],
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double itemWidth = (constraints.maxWidth - 10) / 2;
+                  return Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: <Widget>[
+                      _QuickActionCard(
+                        width: itemWidth,
+                        label: "Transaksi",
+                        icon: Icons.receipt_long_rounded,
+                        onTap: () => context.go("/transactions"),
+                      ),
+                      _QuickActionCard(
+                        width: itemWidth,
+                        label: "Anggaran",
+                        icon: Icons.pie_chart_rounded,
+                        onTap: () => context.go("/budgets"),
+                      ),
+                      _QuickActionCard(
+                        width: itemWidth,
+                        label: "Target",
+                        icon: Icons.flag_rounded,
+                        onTap: () => context.go("/goals"),
+                      ),
+                      _QuickActionCard(
+                        width: itemWidth,
+                        label: "Laporan",
+                        icon: Icons.insert_chart_outlined,
+                        onTap: () => context.go("/reports"),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -258,18 +267,19 @@ class _MetricCard extends StatelessWidget {
 
 class _QuickActionCard extends StatelessWidget {
   const _QuickActionCard({
+    required this.width,
     required this.label,
     required this.icon,
     required this.onTap,
   });
 
+  final double width;
   final String label;
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final double width = (MediaQuery.of(context).size.width - 42) / 2;
     return SizedBox(
       width: width,
       child: Card(

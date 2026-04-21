@@ -55,79 +55,113 @@ class RecurringPage extends ConsumerWidget {
               ),
             );
           }
+          final int activeCount = data.where(
+            (Map<String, dynamic> item) => (item["isActive"] ?? true) == true,
+          ).length;
+          final num monthlyEstimate = data.fold<num>(
+            0,
+            (num sum, Map<String, dynamic> item) {
+              final num amount = (item["amount"] ?? 0) as num;
+              final String frequency = (item["frequency"] ?? "monthly").toString();
+              final num multiplier = switch (frequency) {
+                "daily" => 30,
+                "weekly" => 4,
+                _ => 1,
+              };
+              return sum + (amount * multiplier);
+            },
+          );
 
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(recurringProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: data.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> item = data[index];
-                final bool isActive = (item["isActive"] ?? true) == true;
-                return Card(
-                  child: ListTile(
-                    title: Text((item["description"] ?? "-").toString()),
-                    subtitle: Text(
-                      "${(item["frequency"] ?? "monthly").toString()} • ${(item["type"] ?? "expense").toString()}",
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: <Widget>[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Row(
                       children: <Widget>[
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: <Widget>[
-                            Text(
-                              currency.format((item["amount"] ?? 0) as num),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(isActive ? "Aktif" : "Nonaktif"),
-                          ],
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Rule Aktif",
+                            value: "$activeCount/${data.length}",
+                          ),
                         ),
-                        IconButton(
-                          onPressed: () async {
-                            final bool changed = await _showRecurringDialog(
-                              context,
-                              ref,
-                              initial: item,
-                            );
-                            if (changed) ref.invalidate(recurringProvider);
-                          },
-                          icon: const Icon(Icons.edit, size: 18),
-                        ),
-                        IconButton(
-                          onPressed: () async {
-                            final bool confirm = await confirmDelete(context);
-                            if (!confirm) return;
-                            final int id = _parseInt(item["id"]) ?? 0;
-                            if (id <= 0) return;
-                            await ref
-                                .read(recurringApiProvider)
-                                .deleteRecurring(id);
-                            ref.invalidate(recurringProvider);
-                            if (context.mounted) {
-                              showInfoSnackbar(
-                                  context, "Transaksi berkala dihapus");
-                            }
-                          },
-                          icon: const Icon(Icons.delete, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Estimasi/Bulan",
+                            value: currency.format(monthlyEstimate),
+                          ),
                         ),
                       ],
                     ),
-                    onTap: () async {
-                      final int id = _parseInt(item["id"]) ?? 0;
-                      if (id <= 0) return;
-                      await ref
-                          .read(recurringApiProvider)
-                          .updateRecurring(id, <String, dynamic>{
-                        "isActive": !isActive,
-                      });
-                      ref.invalidate(recurringProvider);
-                    },
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 10),
+                ...data.map((Map<String, dynamic> item) {
+                  final bool isActive = (item["isActive"] ?? true) == true;
+                  return Card(
+                    child: ListTile(
+                      title: Text((item["description"] ?? "-").toString()),
+                      subtitle: Text(
+                        "${(item["frequency"] ?? "monthly").toString()} • ${(item["type"] ?? "expense").toString()}",
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: <Widget>[
+                              Text(
+                                currency.format((item["amount"] ?? 0) as num),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(isActive ? "Aktif" : "Nonaktif"),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final bool changed = await _showRecurringDialog(
+                                context,
+                                ref,
+                                initial: item,
+                              );
+                              if (changed) ref.invalidate(recurringProvider);
+                            },
+                            icon: const Icon(Icons.edit, size: 18),
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final bool confirm = await confirmDelete(context);
+                              if (!confirm) return;
+                              final int id = _parseInt(item["id"]) ?? 0;
+                              if (id <= 0) return;
+                              await ref.read(recurringApiProvider).deleteRecurring(id);
+                              ref.invalidate(recurringProvider);
+                              if (context.mounted) {
+                                showInfoSnackbar(context, "Transaksi berkala dihapus");
+                              }
+                            },
+                            icon: const Icon(Icons.delete, size: 18),
+                          ),
+                        ],
+                      ),
+                      onTap: () async {
+                        final int id = _parseInt(item["id"]) ?? 0;
+                        if (id <= 0) return;
+                        await ref.read(recurringApiProvider).updateRecurring(
+                          id,
+                          <String, dynamic>{"isActive": !isActive},
+                        );
+                        ref.invalidate(recurringProvider);
+                      },
+                    ),
+                  );
+                }),
+              ],
             ),
           );
         },
@@ -136,6 +170,46 @@ class RecurringPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat recurring"),
           onRetry: () => ref.invalidate(recurringProvider),
         ),
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  const _SummaryItem({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF2FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4E6B94),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3558),
+            ),
+          ),
+        ],
       ),
     );
   }

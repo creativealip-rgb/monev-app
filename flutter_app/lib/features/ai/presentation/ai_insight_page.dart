@@ -35,53 +35,60 @@ class AiInsightPage extends ConsumerWidget {
             _ => const Color(0xFF1E56C7),
           };
 
-          return Padding(
+          return ListView(
             padding: const EdgeInsets.all(16),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Row(
-                      children: <Widget>[
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
+            children: <Widget>[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.lightbulb_outline_rounded,
+                                color: color),
                           ),
-                          child: Icon(Icons.lightbulb_outline_rounded,
-                              color: color),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          "Insight Hari Ini",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: color,
+                          const SizedBox(width: 10),
+                          Text(
+                            "Insight Hari Ini",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: color,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      text,
-                      style: const TextStyle(
-                        height: 1.45,
-                        color: Color(0xFF213A5E),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(aiInsightProvider),
-                      child: const Text("Muat Ulang Insight"),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Rekomendasi ini disesuaikan dari pola transaksi terbaru kamu.",
+                        style: TextStyle(color: Color(0xFF4F6D95)),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        text,
+                        style: const TextStyle(
+                          height: 1.45,
+                          color: Color(0xFF213A5E),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      OutlinedButton(
+                        onPressed: () => ref.invalidate(aiInsightProvider),
+                        child: const Text("Muat Ulang Insight"),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
           );
         },
         loading: () => const AppLoadingView(),

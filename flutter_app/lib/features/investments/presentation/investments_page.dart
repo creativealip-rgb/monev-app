@@ -101,11 +101,15 @@ class InvestmentsPage extends ConsumerWidget {
                             final Map<String, dynamic> item = items[index];
                             final num value = ((item["quantity"] ?? 0) as num) *
                                 ((item["currentPrice"] ?? 0) as num);
+                            final num quantity = (item["quantity"] ?? 0) as num;
+                            final String type =
+                                (item["type"] ?? "other").toString();
                             return Card(
                               child: ListTile(
                                 title: Text((item["name"] ?? "-").toString()),
-                                subtitle:
-                                    Text((item["type"] ?? "other").toString()),
+                                subtitle: Text(
+                                  "${_investmentTypeLabel(type)} • Qty ${quantity.toStringAsFixed(2)}",
+                                ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: <Widget>[
@@ -178,12 +182,31 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF2FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         children: <Widget>[
-          Expanded(child: Text(label)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4E6B94),
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3558),
+            ),
+          ),
         ],
       ),
     );
@@ -372,4 +395,15 @@ String _apiError(Object error, String fallback) {
     }
   }
   return fallback;
+}
+
+String _investmentTypeLabel(String type) {
+  return switch (type) {
+    "stock" => "Saham",
+    "crypto" => "Kripto",
+    "mutual_fund" => "Reksa Dana",
+    "gold" => "Emas",
+    "bond" => "Obligasi",
+    _ => "Lainnya",
+  };
 }

@@ -82,14 +82,15 @@ class MobileScaffold extends ConsumerWidget {
                 ],
               ),
         actions: <Widget>[
-          IconButton(
+          IconButton.filledTonal(
             onPressed: () {
               context.go("/profile");
             },
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.person_outline_rounded),
           ),
+          const SizedBox(width: 4),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_horiz),
+            icon: const Icon(Icons.more_horiz_rounded),
             onSelected: (String value) async {
               if (value == "logout") {
                 await ref.read(authApiProvider).logout();
@@ -100,10 +101,11 @@ class MobileScaffold extends ConsumerWidget {
                 const <PopupMenuEntry<String>>[
               PopupMenuItem<String>(
                 value: "logout",
-                child: Text("Logout"),
+                child: Text("Keluar"),
               ),
             ],
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Container(
@@ -123,19 +125,38 @@ class MobileScaffold extends ConsumerWidget {
       ),
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: showBottomNavigation
-          ? NavigationBar(
-              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-              onDestinationSelected: (int index) =>
-                  context.go(_items[index].path),
-              destinations: _items
-                  .map(
-                    (_NavItem item) => NavigationDestination(
-                      icon: Icon(item.icon),
-                      selectedIcon: Icon(item.selectedIcon),
-                      label: item.label,
-                    ),
-                  )
-                  .toList(growable: false),
+          ? Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.96),
+                border: Border(
+                  top: BorderSide(
+                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, -6),
+                  ),
+                ],
+              ),
+              child: NavigationBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                onDestinationSelected: (int index) =>
+                    context.go(_items[index].path),
+                destinations: _items
+                    .map(
+                      (_NavItem item) => NavigationDestination(
+                        icon: Icon(item.icon),
+                        selectedIcon: Icon(item.selectedIcon),
+                        label: item.label,
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
             )
           : null,
     );

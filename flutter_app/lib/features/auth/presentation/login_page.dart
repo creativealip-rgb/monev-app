@@ -16,6 +16,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isSubmitting = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
@@ -103,8 +104,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const <Widget>[
-                                  Text(
+                                children: <Widget>[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE7F0FF),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: const Text(
+                                      "Monev Mobile",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF1E56C7),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
                                     "Selamat datang di Monev",
                                     style: TextStyle(
                                       fontSize: 19,
@@ -113,8 +131,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     ),
                                   ),
                                   SizedBox(height: 4),
-                                  Text(
-                                    "Kelola keuanganmu dengan tampilan ringkas & premium.",
+                                  const Text(
+                                    "Masuk dengan akun Monev Web untuk lanjut memantau keuanganmu.",
                                     style: TextStyle(color: Color(0xFF4E6B94)),
                                   ),
                                 ],
@@ -126,6 +144,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         TextField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             labelText: "Email",
                             prefixIcon: Icon(Icons.mail_outline_rounded),
@@ -134,10 +153,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         const SizedBox(height: 12),
                         TextField(
                           controller: _passwordController,
-                          obscureText: true,
-                          decoration: const InputDecoration(
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          onSubmitted: (_) => _submit(),
+                          decoration: InputDecoration(
                             labelText: "Password",
-                            prefixIcon: Icon(Icons.lock_outline_rounded),
+                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              onPressed: () {
+                                setState(() => _obscurePassword = !_obscurePassword);
+                              },
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),

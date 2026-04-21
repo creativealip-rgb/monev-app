@@ -26,9 +26,37 @@ class _StartupGatePageState extends ConsumerState<StartupGatePage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[Color(0xFFCEE2FF), Color(0xFFF4F8FF)],
+          ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.account_balance_wallet_rounded,
+                color: Color(0xFF1E56C7),
+                size: 34,
+              ),
+              SizedBox(height: 12),
+              CircularProgressIndicator(strokeWidth: 3),
+              SizedBox(height: 12),
+              Text(
+                "Menyiapkan Monev...",
+                style: TextStyle(
+                  color: Color(0xFF4F6D95),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -55,79 +55,108 @@ class DebtsPage extends ConsumerWidget {
               ),
             );
           }
+          num receivableTotal = 0;
+          num debtTotal = 0;
+          for (final Map<String, dynamic> item in data) {
+            final bool isOwed = (item["direction"] ?? "owe").toString() == "owed";
+            if (isOwed) {
+              receivableTotal += (item["amount"] ?? 0) as num;
+            } else {
+              debtTotal += (item["amount"] ?? 0) as num;
+            }
+          }
 
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(debtsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: data.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> item = data[index];
-                final bool isOwed =
-                    (item["direction"] ?? "owe").toString() == "owed";
-                final bool paid =
-                    (item["status"] ?? "unpaid").toString() == "paid";
-                return Card(
-                  child: ListTile(
-                    title: Text((item["debtorName"] ?? "-").toString()),
-                    subtitle: Text(
-                      "${isOwed ? "Piutang" : "Hutang"} • ${(item["description"] ?? "").toString()}",
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: <Widget>[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Row(
                       children: <Widget>[
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: <Widget>[
-                            Text(
-                              currency.format((item["amount"] ?? 0) as num),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(paid ? "Lunas" : "Belum lunas"),
-                          ],
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Piutang",
+                            value: currency.format(receivableTotal),
+                          ),
                         ),
-                        IconButton(
-                          onPressed: () async {
-                            final bool changed = await _showDebtDialog(
-                              context,
-                              ref,
-                              initial: item,
-                            );
-                            if (changed) ref.invalidate(debtsProvider);
-                          },
-                          icon: const Icon(Icons.edit, size: 18),
-                        ),
-                        IconButton(
-                          onPressed: () async {
-                            final bool confirm = await confirmDelete(context);
-                            if (!confirm) return;
-                            final int id = _parseInt(item["id"]) ?? 0;
-                            if (id <= 0) return;
-                            await ref.read(debtsApiProvider).deleteDebt(id);
-                            ref.invalidate(debtsProvider);
-                            if (context.mounted) {
-                              showInfoSnackbar(context, "Data dihapus");
-                            }
-                          },
-                          icon: const Icon(Icons.delete, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Hutang",
+                            value: currency.format(debtTotal),
+                          ),
                         ),
                       ],
                     ),
-                    onTap: () async {
-                      final int id = _parseInt(item["id"]) ?? 0;
-                      if (id <= 0) return;
-                      await ref
-                          .read(debtsApiProvider)
-                          .updateDebt(id, <String, dynamic>{
-                        "status": paid ? "unpaid" : "paid",
-                      });
-                      ref.invalidate(debtsProvider);
-                    },
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 10),
+                ...data.map((Map<String, dynamic> item) {
+                  final bool isOwed = (item["direction"] ?? "owe").toString() == "owed";
+                  final bool paid = (item["status"] ?? "unpaid").toString() == "paid";
+                  return Card(
+                    child: ListTile(
+                      title: Text((item["debtorName"] ?? "-").toString()),
+                      subtitle: Text(
+                        "${isOwed ? "Piutang" : "Hutang"} • ${(item["description"] ?? "").toString()}",
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: <Widget>[
+                              Text(
+                                currency.format((item["amount"] ?? 0) as num),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(paid ? "Lunas" : "Belum lunas"),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final bool changed = await _showDebtDialog(
+                                context,
+                                ref,
+                                initial: item,
+                              );
+                              if (changed) ref.invalidate(debtsProvider);
+                            },
+                            icon: const Icon(Icons.edit, size: 18),
+                          ),
+                          IconButton(
+                            onPressed: () async {
+                              final bool confirm = await confirmDelete(context);
+                              if (!confirm) return;
+                              final int id = _parseInt(item["id"]) ?? 0;
+                              if (id <= 0) return;
+                              await ref.read(debtsApiProvider).deleteDebt(id);
+                              ref.invalidate(debtsProvider);
+                              if (context.mounted) {
+                                showInfoSnackbar(context, "Data dihapus");
+                              }
+                            },
+                            icon: const Icon(Icons.delete, size: 18),
+                          ),
+                        ],
+                      ),
+                      onTap: () async {
+                        final int id = _parseInt(item["id"]) ?? 0;
+                        if (id <= 0) return;
+                        await ref.read(debtsApiProvider).updateDebt(
+                          id,
+                          <String, dynamic>{"status": paid ? "unpaid" : "paid"},
+                        );
+                        ref.invalidate(debtsProvider);
+                      },
+                    ),
+                  );
+                }),
+              ],
             ),
           );
         },
@@ -136,6 +165,46 @@ class DebtsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat hutang/piutang"),
           onRetry: () => ref.invalidate(debtsProvider),
         ),
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  const _SummaryItem({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF2FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4E6B94),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3558),
+            ),
+          ),
+        ],
       ),
     );
   }

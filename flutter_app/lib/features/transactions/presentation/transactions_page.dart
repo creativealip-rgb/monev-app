@@ -99,92 +99,113 @@ class TransactionsPage extends ConsumerWidget {
             symbol: "Rp ",
             decimalDigits: 0,
           );
+          final DateTime now = DateTime.now();
+          num incomeTotal = 0;
+          num expenseTotal = 0;
+          for (final Map<String, dynamic> item in data) {
+            final num amount = (item["amount"] ?? 0) as num;
+            final String type = (item["type"] ?? "expense").toString();
+            if (type == "income") {
+              incomeTotal += amount;
+            } else if (type == "expense") {
+              expenseTotal += amount;
+            }
+          }
+          final num netTotal = incomeTotal - expenseTotal;
 
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(transactionsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: data.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> item = data[index];
-                final num amount = (item["amount"] ?? 0) as num;
-                final String type = (item["type"] ?? "expense").toString();
-                final Color amountColor = switch (type) {
-                  "income" => Colors.green,
-                  "expense" => Colors.red,
-                  _ => Colors.blue,
-                };
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: <Widget>[
+                _TransactionSummaryCard(
+                  monthLabel: DateFormat("MMMM yyyy", "id_ID").format(now),
+                  incomeText: currency.format(incomeTotal),
+                  expenseText: currency.format(expenseTotal),
+                  netText: currency.format(netTotal),
+                  netPositive: netTotal >= 0,
+                ),
+                const SizedBox(height: 10),
+                ...data.map((Map<String, dynamic> item) {
+                  final num amount = (item["amount"] ?? 0) as num;
+                  final String type = (item["type"] ?? "expense").toString();
+                  final Color amountColor = switch (type) {
+                    "income" => const Color(0xFF12986B),
+                    "expense" => const Color(0xFFC55044),
+                    _ => const Color(0xFF1E56C7),
+                  };
 
-                return Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: amountColor.withValues(alpha: 0.14),
-                      child: Icon(
-                        switch (type) {
-                          "income" => Icons.south_west_rounded,
-                          "expense" => Icons.north_east_rounded,
-                          _ => Icons.compare_arrows_rounded,
-                        },
-                        color: amountColor,
-                        size: 18,
+                  return Card(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: amountColor.withValues(alpha: 0.14),
+                        child: Icon(
+                          switch (type) {
+                            "income" => Icons.south_west_rounded,
+                            "expense" => Icons.north_east_rounded,
+                            _ => Icons.compare_arrows_rounded,
+                          },
+                          color: amountColor,
+                          size: 18,
+                        ),
+                      ),
+                      title: Text((item["description"] ?? "-").toString()),
+                      subtitle: Text(
+                        "${(item["categoryName"] ?? "Tanpa kategori")} • ${_formatDate(item["date"])}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: <Widget>[
+                          Text(
+                            currency.format(amount),
+                            style: TextStyle(
+                              color: amountColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 18),
+                                onPressed: () async {
+                                  final bool changed = await _showTransactionDialog(
+                                    context,
+                                    ref,
+                                    initial: item,
+                                  );
+                                  if (changed) {
+                                    ref.invalidate(transactionsProvider);
+                                  }
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18),
+                                onPressed: () async {
+                                  final bool confirm = await confirmDelete(context);
+                                  if (!confirm) return;
+                                  final int id = _parseInt(item["id"]) ?? 0;
+                                  if (id <= 0) return;
+                                  await ref
+                                      .read(transactionsApiProvider)
+                                      .deleteTransaction(id);
+                                  ref.invalidate(transactionsProvider);
+                                  if (context.mounted) {
+                                    showInfoSnackbar(context, "Transaksi dihapus");
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    title: Text((item["description"] ?? "-").toString()),
-                    subtitle: Text(
-                        (item["categoryName"] ?? "Tanpa kategori").toString()),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: <Widget>[
-                        Text(
-                          currency.format(amount),
-                          style: TextStyle(
-                            color: amountColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 18),
-                              onPressed: () async {
-                                final bool changed =
-                                    await _showTransactionDialog(
-                                  context,
-                                  ref,
-                                  initial: item,
-                                );
-                                if (changed) {
-                                  ref.invalidate(transactionsProvider);
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, size: 18),
-                              onPressed: () async {
-                                final bool confirm =
-                                    await confirmDelete(context);
-                                if (!confirm) return;
-                                final int id = _parseInt(item["id"]) ?? 0;
-                                if (id <= 0) return;
-                                await ref
-                                    .read(transactionsApiProvider)
-                                    .deleteTransaction(id);
-                                ref.invalidate(transactionsProvider);
-                                if (context.mounted) {
-                                  showInfoSnackbar(
-                                      context, "Transaksi dihapus");
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                  );
+                }),
+              ],
             ),
           );
         },
@@ -193,6 +214,120 @@ class TransactionsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat transaksi"),
           onRetry: () => ref.invalidate(transactionsProvider),
         ),
+      ),
+    );
+  }
+}
+
+class _TransactionSummaryCard extends StatelessWidget {
+  const _TransactionSummaryCard({
+    required this.monthLabel,
+    required this.incomeText,
+    required this.expenseText,
+    required this.netText,
+    required this.netPositive,
+  });
+
+  final String monthLabel;
+  final String incomeText;
+  final String expenseText;
+  final String netText;
+  final bool netPositive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              "Ringkasan $monthLabel",
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F2547),
+                  ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _SummaryMetric(
+                    label: "Pemasukan",
+                    value: incomeText,
+                    color: const Color(0xFF12986B),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: "Pengeluaran",
+                    value: expenseText,
+                    color: const Color(0xFFC55044),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _SummaryMetric(
+                    label: "Selisih",
+                    value: netText,
+                    color: netPositive
+                        ? const Color(0xFF1E56C7)
+                        : const Color(0xFFC55044),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4E6B94),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -561,4 +696,11 @@ String _apiError(Object error, String fallback) {
     }
   }
   return fallback;
+}
+
+String _formatDate(dynamic rawDate) {
+  if (rawDate == null) return "-";
+  final DateTime? parsed = DateTime.tryParse(rawDate.toString());
+  if (parsed == null) return rawDate.toString();
+  return DateFormat("dd MMM", "id_ID").format(parsed);
 }

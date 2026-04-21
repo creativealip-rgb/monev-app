@@ -54,82 +54,112 @@ class BillsPage extends ConsumerWidget {
               ),
             );
           }
+          final int unpaidCount = data.where(
+            (Map<String, dynamic> bill) => (bill["isPaid"] ?? false) != true,
+          ).length;
+          final num unpaidTotal = data.fold<num>(
+            0,
+            (num sum, Map<String, dynamic> bill) => (bill["isPaid"] ?? false) == true
+                ? sum
+                : sum + ((bill["amount"] ?? 0) as num),
+          );
 
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(billsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: data.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> bill = data[index];
-                final bool isPaid = (bill["isPaid"] ?? false) == true;
-                return Card(
-                  child: ListTile(
-                    title: Text((bill["name"] ?? "-").toString()),
-                    subtitle: Text(
-                      "Jatuh tempo tgl ${(bill["dueDate"] ?? "-").toString()} • ${(bill["frequency"] ?? "monthly").toString()}",
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: <Widget>[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Row(
                       children: <Widget>[
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: <Widget>[
-                            Text(
-                              currency.format((bill["amount"] ?? 0) as num),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(isPaid ? "Lunas" : "Belum lunas"),
-                          ],
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Belum Lunas",
+                            value: "$unpaidCount tagihan",
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
-                          onPressed: () async {
-                            final bool changed = await _showBillDialog(
-                              context,
-                              ref,
-                              initial: bill,
-                            );
-                            if (changed) ref.invalidate(billsProvider);
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 18),
-                          onPressed: () async {
-                            final bool confirm = await confirmDelete(context);
-                            if (!confirm) return;
-                            final int id = _parseInt(bill["id"]) ?? 0;
-                            if (id <= 0) return;
-                            await ref.read(billsApiProvider).deleteBill(id);
-                            ref.invalidate(billsProvider);
-                            if (context.mounted) {
-                              showInfoSnackbar(context, "Tagihan dihapus");
-                            }
-                          },
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Nominal Tertunda",
+                            value: currency.format(unpaidTotal),
+                          ),
                         ),
                       ],
                     ),
-                    onTap: () async {
-                      final int id = _parseInt(bill["id"]) ?? 0;
-                      if (id <= 0) return;
-                      await ref.read(billsApiProvider).updateBill(
-                        id,
-                        <String, dynamic>{"action": "toggle"},
-                      );
-                      ref.invalidate(billsProvider);
-                      if (context.mounted) {
-                        showInfoSnackbar(
-                            context,
-                            isPaid
-                                ? "Tagihan dibuka lagi"
-                                : "Tagihan ditandai lunas");
-                      }
-                    },
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 10),
+                ...data.map((Map<String, dynamic> bill) {
+                  final bool isPaid = (bill["isPaid"] ?? false) == true;
+                  return Card(
+                    child: ListTile(
+                      title: Text((bill["name"] ?? "-").toString()),
+                      subtitle: Text(
+                        "Jatuh tempo tgl ${(bill["dueDate"] ?? "-").toString()} • ${(bill["frequency"] ?? "monthly").toString()}",
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: <Widget>[
+                              Text(
+                                currency.format((bill["amount"] ?? 0) as num),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(isPaid ? "Lunas" : "Belum lunas"),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 18),
+                            onPressed: () async {
+                              final bool changed = await _showBillDialog(
+                                context,
+                                ref,
+                                initial: bill,
+                              );
+                              if (changed) ref.invalidate(billsProvider);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 18),
+                            onPressed: () async {
+                              final bool confirm = await confirmDelete(context);
+                              if (!confirm) return;
+                              final int id = _parseInt(bill["id"]) ?? 0;
+                              if (id <= 0) return;
+                              await ref.read(billsApiProvider).deleteBill(id);
+                              ref.invalidate(billsProvider);
+                              if (context.mounted) {
+                                showInfoSnackbar(context, "Tagihan dihapus");
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      onTap: () async {
+                        final int id = _parseInt(bill["id"]) ?? 0;
+                        if (id <= 0) return;
+                        await ref.read(billsApiProvider).updateBill(
+                          id,
+                          <String, dynamic>{"action": "toggle"},
+                        );
+                        ref.invalidate(billsProvider);
+                        if (context.mounted) {
+                          showInfoSnackbar(
+                            context,
+                            isPaid ? "Tagihan dibuka lagi" : "Tagihan ditandai lunas",
+                          );
+                        }
+                      },
+                    ),
+                  );
+                }),
+              ],
             ),
           );
         },
@@ -138,6 +168,46 @@ class BillsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat tagihan"),
           onRetry: () => ref.invalidate(billsProvider),
         ),
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  const _SummaryItem({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF2FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4E6B94),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3558),
+            ),
+          ),
+        ],
       ),
     );
   }

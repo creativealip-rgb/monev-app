@@ -53,71 +53,102 @@ class AccountsPage extends ConsumerWidget {
               ),
             );
           }
+          final num totalBalance = data.fold<num>(
+            0,
+            (num sum, Map<String, dynamic> account) =>
+                sum + ((account["balance"] ?? 0) as num),
+          );
+          final int activeCount = data.where(
+            (Map<String, dynamic> account) => (account["isActive"] ?? true) == true,
+          ).length;
 
           return RefreshIndicator(
             onRefresh: () async => ref.refresh(accountsProvider.future),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: data.length,
-              itemBuilder: (BuildContext context, int index) {
-                final Map<String, dynamic> account = data[index];
-                final String type = (account["type"] ?? "").toString();
-                return Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: const Color(0xFFDCE8FF),
-                      child: Icon(
-                        switch (type) {
-                          "bank" => Icons.account_balance_rounded,
-                          "emoney" => Icons.phone_iphone_rounded,
-                          "cash" => Icons.payments_rounded,
-                          "credit_card" => Icons.credit_card_rounded,
-                          _ => Icons.account_balance_wallet_rounded,
-                        },
-                        color: const Color(0xFF1E56C7),
-                      ),
-                    ),
-                    title: Text((account["name"] ?? "-").toString()),
-                    subtitle: Text((account["type"] ?? "-").toString()),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+              children: <Widget>[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                    child: Row(
                       children: <Widget>[
-                        Text(
-                          currency.format((account["balance"] ?? 0) as num),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Total Saldo",
+                            value: currency.format(totalBalance),
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
-                          onPressed: () async {
-                            final bool changed = await _showAccountDialog(
-                              context,
-                              ref,
-                              initial: account,
-                            );
-                            if (changed) ref.invalidate(accountsProvider);
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 18),
-                          onPressed: () async {
-                            final bool confirm = await confirmDelete(context);
-                            if (!confirm) return;
-                            final int id = _parseInt(account["id"]) ?? 0;
-                            if (id <= 0) return;
-                            await ref
-                                .read(accountsApiProvider)
-                                .deleteAccount(id);
-                            ref.invalidate(accountsProvider);
-                            if (context.mounted) {
-                              showInfoSnackbar(context, "Akun dihapus");
-                            }
-                          },
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _SummaryItem(
+                            label: "Akun Aktif",
+                            value: "$activeCount/${data.length}",
+                          ),
                         ),
                       ],
                     ),
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 10),
+                ...data.map((Map<String, dynamic> account) {
+                  final String type = (account["type"] ?? "").toString();
+                  return Card(
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFFDCE8FF),
+                        child: Icon(
+                          switch (type) {
+                            "bank" => Icons.account_balance_rounded,
+                            "emoney" => Icons.phone_iphone_rounded,
+                            "cash" => Icons.payments_rounded,
+                            "credit_card" => Icons.credit_card_rounded,
+                            _ => Icons.account_balance_wallet_rounded,
+                          },
+                          color: const Color(0xFF1E56C7),
+                        ),
+                      ),
+                      title: Text((account["name"] ?? "-").toString()),
+                      subtitle: Text((account["type"] ?? "-").toString()),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            currency.format((account["balance"] ?? 0) as num),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 18),
+                            onPressed: () async {
+                              final bool changed = await _showAccountDialog(
+                                context,
+                                ref,
+                                initial: account,
+                              );
+                              if (changed) ref.invalidate(accountsProvider);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 18),
+                            onPressed: () async {
+                              final bool confirm = await confirmDelete(context);
+                              if (!confirm) return;
+                              final int id = _parseInt(account["id"]) ?? 0;
+                              if (id <= 0) return;
+                              await ref
+                                  .read(accountsApiProvider)
+                                  .deleteAccount(id);
+                              ref.invalidate(accountsProvider);
+                              if (context.mounted) {
+                                showInfoSnackbar(context, "Akun dihapus");
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
             ),
           );
         },
@@ -126,6 +157,46 @@ class AccountsPage extends ConsumerWidget {
           message: _apiError(error, "Gagal memuat akun"),
           onRetry: () => ref.invalidate(accountsProvider),
         ),
+      ),
+    );
+  }
+}
+
+class _SummaryItem extends StatelessWidget {
+  const _SummaryItem({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF2FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF4E6B94),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E3558),
+            ),
+          ),
+        ],
       ),
     );
   }

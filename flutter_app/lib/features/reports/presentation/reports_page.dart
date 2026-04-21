@@ -44,7 +44,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const Text(
-                      "Pusat Laporan",
+                      "Laporan Keuangan",
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF0F2547),
@@ -56,34 +56,47 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       style: TextStyle(color: Color(0xFF4F6D95)),
                     ),
                     const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: _exporting
-                          ? null
-                          : () async {
-                              setState(() => _exporting = true);
-                              try {
-                                final String csv = await ref
-                                    .read(reportsApiProvider)
-                                    .exportCsv();
-                                if (!context.mounted) return;
-                                showInfoSnackbar(context,
-                                    "Export CSV siap (${csv.length} karakter)");
-                              } on DioException catch (e) {
-                                final dynamic body = e.response?.data;
-                                if (!context.mounted) return;
-                                showInfoSnackbar(
-                                  context,
-                                  body is Map<String, dynamic> &&
-                                          body["error"] != null
-                                      ? body["error"].toString()
-                                      : "Gagal export CSV",
-                                );
-                              } finally {
-                                if (mounted) setState(() => _exporting = false);
-                              }
-                            },
-                      icon: const Icon(Icons.download_outlined),
-                      label: Text(_exporting ? "Memproses..." : "Export CSV"),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _exporting
+                                ? null
+                                : () async {
+                                    setState(() => _exporting = true);
+                                    try {
+                                      final String csv = await ref
+                                          .read(reportsApiProvider)
+                                          .exportCsv();
+                                      if (!context.mounted) return;
+                                      showInfoSnackbar(context,
+                                          "Export CSV siap (${csv.length} karakter)");
+                                    } on DioException catch (e) {
+                                      final dynamic body = e.response?.data;
+                                      if (!context.mounted) return;
+                                      showInfoSnackbar(
+                                        context,
+                                        body is Map<String, dynamic> &&
+                                                body["error"] != null
+                                            ? body["error"].toString()
+                                            : "Gagal export CSV",
+                                      );
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() => _exporting = false);
+                                      }
+                                    }
+                                  },
+                            icon: const Icon(Icons.download_outlined),
+                            label: Text(_exporting ? "Memproses..." : "Export CSV"),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: () => ref.invalidate(reportsHistoryProvider),
+                          child: const Text("Refresh"),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -109,9 +122,24 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                       final Map<String, dynamic> item = data[index];
                       return Card(
                         child: ListTile(
+                          leading: const Icon(Icons.description_outlined),
                           title: Text((item["type"] ?? "Laporan").toString()),
                           subtitle: Text((item["period"] ?? "-").toString()),
-                          trailing: Text((item["status"] ?? "-").toString()),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF2FF),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              (item["status"] ?? "-").toString(),
+                              style: const TextStyle(
+                                color: Color(0xFF1E3558),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                         ),
                       );
                     },
